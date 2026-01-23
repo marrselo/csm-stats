@@ -576,7 +576,7 @@ app.post("abstract-sales/init-update", async (c) => {
   console.log(body);
   (async () => {
     for (const csmNode of csmNodes) {
-      updateAbstractSales(csmNode, Number(body["chunkSize"]), force);
+      await updateAbstractSales(csmNode, Number(body["chunkSize"]), force);
     }
   })();
 
