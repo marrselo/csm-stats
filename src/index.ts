@@ -43,7 +43,7 @@ function getMonthUnixRange(date: Date): { start: number; end: number } {
     23,
     59,
     59,
-    999,
+    999
   );
 
   return {
@@ -123,7 +123,7 @@ interface AbstractResponse {
 
 function getMonthByUnixTime(
   time: number,
-  ranges: { monthName: string; start: number; end: number }[],
+  ranges: { monthName: string; start: number; end: number }[]
 ) {
   for (const range of ranges) {
     if (range.start <= time && time <= range.end) {
@@ -141,7 +141,7 @@ async function getDataLastMonths(
   docTypesMap: Record<string, CsmTypeDocument>,
   csmPurchasesRepo: Repository<PurDocuments>,
   csmCompany: ComCompanies,
-  csmOrdersRepo: Repository<SalOrders>,
+  csmOrdersRepo: Repository<SalOrders>
 ) {
   const today = new Date();
   today.setDate(today.getDate() - 15);
@@ -218,10 +218,10 @@ async function getDataLastMonths(
               },
               orders_amount: 0,
             },
-          ]),
+          ])
         ),
       },
-    ]),
+    ])
   );
   const monthsData = Object.fromEntries(
     months.map((r) => [
@@ -239,7 +239,7 @@ async function getDataLastMonths(
         orders_amount: 0,
         orders_types_count: { total: 0, facturas: 0, boletas: 0, otros: 0 },
       },
-    ]),
+    ])
   );
 
   sales.forEach((sal: AbstractSale) => {
@@ -414,7 +414,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
   const documentTypes = await csmDocumentTypesRepo.find();
 
   const docTypesMap = Object.fromEntries(
-    documentTypes.map((dt) => [dt.id, dt]),
+    documentTypes.map((dt) => [dt.id, dt])
   );
 
   const csmSubsidiariesRepo = datasource.sales.getRepository(ComSubsidiaries);
@@ -445,7 +445,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     select: { id: true, documentTypeName: true },
   });
   const documentsKardexEntries = documentsKardex.filter(
-    (dk) => dk.documentTypeName?.trim() === "Ingreso de Mercaderia",
+    (dk) => dk.documentTypeName?.trim() === "Ingreso de Mercaderia"
   );
 
   const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
@@ -476,11 +476,11 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     docTypesMap,
     csmPurchasesRepo,
     csmCompany,
-    csmOrdersRepo,
+    csmOrdersRepo
   );
   const warehousesData: AbstractWarehouse[] = [];
   const last_three_months: AbstractMonthData[] = Object.values(
-    abstractData.monthsData,
+    abstractData.monthsData
   );
   for (const warehouseId in abstractData.warehousesMonthsData) {
     const warehouse = warehousesMap[warehouseId];
@@ -568,12 +568,18 @@ app.get("abstract-company/acl-code/:aclCode", async (c) => {
 app.post("abstract-sales/init-update", async (c) => {
   const body = await c.req.json();
   const force = body["force"] === true;
+  const csmNodes =
+    body["csmNodes"] && Array.isArray(body["csmNodes"])
+      ? body["csmNodes"]
+      : ["n1", "n3", "n4", "n5"];
+
   console.log(body);
-  updateAbstractSales(
-    String(body["nodeName"]),
-    Number(body["chunkSize"]),
-    force,
-  );
+  (async () => {
+    for (const csmNode of csmNodes) {
+      updateAbstractSales(csmNode, Number(body["chunkSize"]), force);
+    }
+  })();
+
   return c.json({
     ok: "ok",
   });
@@ -609,7 +615,7 @@ app.get("warehouses", async (c) => {
         .split(".")[0];
 
       return [t.id, csmNode];
-    }),
+    })
   );
 
   const groups: Record<
