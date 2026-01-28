@@ -565,6 +565,41 @@ app.get("abstract-company/acl-code/:aclCode", async (c) => {
   });
 });
 
+app.get("abstract-company/acl-id/:aclId", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    id: Number(c.req.param().aclId),
+  });
+  if (!aclCompany) {
+    return c.json({ error: "ACL Company not found" }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const nodeName = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  const urls = Object.fromEntries(aclTemplate?.settings.domains
+    .map((d: any) =>[ d.code,d.endPoint]))
+
+
+  return c.json({
+    csm_node: nodeName,
+    acl_id: aclCompany?.id,
+    acl_code: aclCompany?.codeCompany,
+    acl_template: aclTemplate?.name,
+    company_ruc: aclCompany?.ruc,
+    company_name: aclCompany?.nombreComercial,
+    urls
+  });
+});
+
 app.post("abstract-sales/init-update", async (c) => {
   const body = await c.req.json();
   const force = body["force"] === true;
