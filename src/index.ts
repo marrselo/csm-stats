@@ -372,23 +372,40 @@ async function getDataLastMonths(
 app.get("abstract/acl-code/:aclCode", async (c) => {
   const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
   const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode
   const aclCompany = await aclCompanyRepo.findOneBy({
-    codeCompany: c.req.param().aclCode,
+    codeCompany: companyAclCode,
   });
   if (!aclCompany) {
-    return c.json({ error: "ACL Company not found" }, 404);
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
   }
 
   const aclTemplate = await aclTemplateRepo.findOneBy({
     id: aclCompany?.templateId,
   });
 
+    if (!aclTemplate) {
+    return c.json({ error: `ACL Template  ${aclCompany.templateId} not found` }, 400);
+  }
+
   // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
   const csmNode: string = aclTemplate?.settings.domains
     .find((d: any) => d.code === "PRODUCTS_URL")
     .endPoint.replace("https://", "")
     .split(".")[0];
+
+  
+  if(!csmNode){
+    console.log('CSM NODE not found',aclTemplate?.settings)
+    return c.json({ error: `Node not found` }, 400);
+
+  }
+
   const datasource = getDatasource(csmNode);
+
+  if(!datasource){
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
 
   const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
   const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
