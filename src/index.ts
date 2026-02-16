@@ -404,6 +404,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
   const datasource = getDatasource(csmNode);
 
   if(!datasource){
+    console.log('Datasource not found',aclTemplate?.settings)
     return c.json({ error: `DataSource ${csmNode} not found` }, 400);
   }
 
