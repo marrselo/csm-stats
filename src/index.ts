@@ -144,7 +144,8 @@ async function getDataLastMonths(
   csmOrdersRepo: Repository<SalOrders>
 ) {
   const today = new Date();
-  today.setDate(today.getDate() - 15);
+  // today.setDate(today.getDate());
+  // today.setDate(today.getDate() - 15);
   const months: {
     monthName: string;
     monthNumber: number;
