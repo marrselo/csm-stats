@@ -11,6 +11,8 @@
     "typeorm": "^0.3.26"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "oxfmt": "^0.13.0",
+    "oxlint": "^1.28.0"
   }
 }

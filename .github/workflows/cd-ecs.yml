@@ -29,11 +29,17 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # - name: Download task definition
+      #   run: |
+      #     aws ecs describe-task-definition \
+      #     --task-definition TaskDef_csm-stats \
+      #     --query taskDefinition > task-definition-prod.json
+
       - name: Build, tag, and push image to ECR
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          ECR_REPOSITORY: stats
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker run --rm --privileged tonistiigi/binfmt --install all
@@ -44,14 +50,18 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ecs-task-def.json
+          task-definition-family: TaskDef_csm-stats
+          # task-definition: task-definition-prod.json
           container-name: Containercsm-stats
           image: ${{ steps.build-image.outputs.image }}
+          environment-variables: |
+            LOG_LEVEL=info
+            BUILD_ID=${{ github.sha }}
 
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
+          service: csm-stats-fargate
+          cluster: cross-cluster
           wait-for-service-stability: false
