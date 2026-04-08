@@ -36,23 +36,23 @@ proxyOpenaiController.post('/transcribe', async (c) => {
     const formData = await c.req.formData()
 
     const file = formData.get('file') as File
-    const model = (formData.get('model') as string) || 'gpt-4o-mini-transcribe'
+    // const model = (formData.get('model') as string) || 'gpt-4o-mini-transcribe'
 
     if (!file) {
       return c.json({ error: 'File is required' }, 400)
     }
 
     // Creamos nuevo FormData para reenviar a OpenAI
-    const proxyForm = new FormData()
-    proxyForm.append('file', file)
-    proxyForm.append('model', model)
+    // const proxyForm = new FormData()
+    // proxyForm.append('file', file)
+    // proxyForm.append('model', model)
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
-      body: proxyForm,
+      body: formData,
     })
 
     return response
