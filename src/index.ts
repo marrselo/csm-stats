@@ -20,7 +20,7 @@ import { CsmTypeDocument } from "./csm-document-type.entity";
 import { proxyC3Controller } from "./csm-c3-proxy";
 import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
-import { proxyOpenIaController } from "./openia-proxy";
+import { proxyOpenaiController } from "./openai-proxy";
 
 process.env.TZ = "UTC";
 const app = new Hono();
@@ -739,7 +739,7 @@ app.get("warehouses", async (c) => {
 });
 
 app.route("c3-proxy", proxyC3Controller);
-app.route("openai-proxy", proxyOpenIaController);
+app.route("openai-proxy", proxyOpenaiController);
 
 export default {
   port: process.env.PORT || 3000,

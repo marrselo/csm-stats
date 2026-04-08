@@ -3,9 +3,9 @@ import { HTTPException } from "hono/http-exception";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!
 
 
-export const proxyOpenIaController = new Hono()
+export const proxyOpenaiController = new Hono()
 
-proxyOpenIaController.post('/api/openai/chat', async (c) => {
+proxyOpenaiController.post('/chat', async (c) => {
   if (!OPENAI_API_KEY) throw new HTTPException(400, { message: 'OpenAI API Key not found' });
   try {
     const body = await c.req.json()
@@ -29,7 +29,7 @@ proxyOpenIaController.post('/api/openai/chat', async (c) => {
 })
 
 
-proxyOpenIaController.post('/api/openai/transcribe', async (c) => {
+proxyOpenaiController.post('/transcribe', async (c) => {
   if (!OPENAI_API_KEY) throw new HTTPException(400, { message: 'OpenAI API Key not found' });
 
   try {
