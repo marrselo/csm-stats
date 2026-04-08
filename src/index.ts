@@ -20,6 +20,7 @@ import { CsmTypeDocument } from "./csm-document-type.entity";
 import { proxyC3Controller } from "./csm-c3-proxy";
 import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
+import { proxyOpenIaController } from "./openia-proxy";
 
 process.env.TZ = "UTC";
 const app = new Hono();
@@ -385,7 +386,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     id: aclCompany?.templateId,
   });
 
-    if (!aclTemplate) {
+  if (!aclTemplate) {
     return c.json({ error: `ACL Template  ${aclCompany.templateId} not found` }, 400);
   }
 
@@ -395,17 +396,17 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     .endPoint.replace("https://", "")
     .split(".")[0];
 
-  
-  if(!csmNode){
-    console.log('CSM NODE not found',aclTemplate?.settings)
+
+  if (!csmNode) {
+    console.log('CSM NODE not found', aclTemplate?.settings)
     return c.json({ error: `Node not found` }, 400);
 
   }
 
   const datasource = getDatasource(csmNode);
 
-  if(!datasource){
-    console.log('Datasource not found',aclTemplate?.settings)
+  if (!datasource) {
+    console.log('Datasource not found', aclTemplate?.settings)
     return c.json({ error: `DataSource ${csmNode} not found` }, 400);
   }
 
@@ -605,7 +606,7 @@ app.get("abstract-company/acl-id/:aclId", async (c) => {
     .split(".")[0];
 
   const urls = Object.fromEntries(aclTemplate?.settings.domains
-    .map((d: any) =>[ d.code,d.endPoint]))
+    .map((d: any) => [d.code, d.endPoint]))
 
 
   return c.json({
@@ -738,6 +739,7 @@ app.get("warehouses", async (c) => {
 });
 
 app.route("c3-proxy", proxyC3Controller);
+app.route("openai-proxy", proxyOpenIaController);
 
 export default {
   port: process.env.PORT || 3000,
