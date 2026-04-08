@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { ContentfulStatusCode } from "hono/utils/http-status";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!
 
 
@@ -19,9 +20,9 @@ proxyOpenaiController.post('/chat', async (c) => {
       body: JSON.stringify(body),
     })
 
-    // const data = await response.json()
+    const data = await response.json()
+    return c.json(data, response.status as ContentfulStatusCode)
 
-    return response
   } catch (error) {
     console.error('ERROR CHAT OPENIA', error)
     throw new HTTPException(400, { message: 'Error al conectar con OpenAI' });
@@ -54,8 +55,9 @@ proxyOpenaiController.post('/transcribe', async (c) => {
       },
       body: formData,
     })
+    const data = await response.json()
 
-    return response
+    return c.json(data, response.status as ContentfulStatusCode)
   } catch (error) {
     console.error('ERROR TRANSCRIBE OPENIA', error)
     throw new HTTPException(400, { message: 'Error al conectar con OpenAI' });
