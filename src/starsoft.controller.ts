@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { getDatasource } from "./datasources";
 import { ComMsTypeDocuments } from "./com-ms-type-documents.entity";
+import { ComCompanies } from "./csm-company/csm-company.entity";
 
 export const starsoftController = new Hono()
 
@@ -36,7 +37,10 @@ starsoftController.get('/bank-transactions/income', async (c) => {
 
 
     const comMsTypeDocumentsRepo = datasource.sales.getRepository(ComMsTypeDocuments);
+    const comCompanyRepo = datasource.sales.getRepository(ComCompanies);
 
+    const company = await comCompanyRepo.findOne({ where: { aclId: aclCredentials.company.id } })
+    if (!company) throw new HTTPException(404, { message: 'Company not found' });
     const typeDocuments = await comMsTypeDocumentsRepo.find()
     const typeDocumentsMap = new Map(typeDocuments.map(t => [t.id, t]))
 
@@ -68,11 +72,11 @@ INNER JOIN ms_type_transaction_bank AS mttb
     ON mttb.id = ctb.type_transaction_bank_id
 WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`
 
-    const rawBankTransactions = await datasource.sales.query(sqlQuery, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId]);
+    const rawBankTransactions = await datasource.sales.query(sqlQuery, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
 
     console.log(sqlQuery, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId])
 
-    console.log(rawBankTransactions)
+    console.log({ rawBankTransactions })
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
       return {
@@ -107,7 +111,10 @@ starsoftController.get('/bank-transactions/expenses', async (c) => {
     const dateEnd = c.req.query('dateEnd')
     const currency = c.req.query('currency')
     const subsidiaryId = c.req.query('subsidiaryId')
+    const comCompanyRepo = datasource.sales.getRepository(ComCompanies);
 
+    const company = await comCompanyRepo.findOne({ where: { aclId: aclCredentials.company.id } })
+    if (!company) throw new HTTPException(404, { message: 'Company not found' });
 
     const comMsTypeDocumentsRepo = datasource.sales.getRepository(ComMsTypeDocuments);
 
@@ -141,7 +148,7 @@ LEFT JOIN ms_person AS mp
     ON mp.id = ps.person_id
 INNER JOIN ms_type_transaction_bank AS mttb 
     ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId]);
+WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
 
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
