@@ -16,7 +16,7 @@ async function getAclCredentials(token: string) {
   return data.data;
 }
 
-starsoftController.post('/bank-transactions/income', async (c) => {
+starsoftController.get('/bank-transactions/income', async (c) => {
   try {
 
     const authorization = c.req.header('Authorization')
@@ -32,6 +32,8 @@ starsoftController.post('/bank-transactions/income', async (c) => {
     const dateStart = c.req.query('dateStart')
     const dateEnd = c.req.query('dateEnd')
     const currency = c.req.query('currency')
+    const subsidiaryId = c.req.query('subsidiaryId')
+
 
     const comMsTypeDocumentsRepo = datasource.sales.getRepository(ComMsTypeDocuments);
 
@@ -65,7 +67,7 @@ LEFT JOIN ms_person AS mp
     ON mp.id = cc.person_id
 INNER JOIN ms_type_transaction_bank AS mttb 
     ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date > ? AND ctb.payment_date < ? AND currency = ?;`, [aclCredentials.company.id, dateStart, dateEnd, currency]);
+WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId]);
 
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
@@ -84,7 +86,7 @@ WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AN
 })
 
 
-starsoftController.post('/bank-transactions/expenses', async (c) => {
+starsoftController.get('/bank-transactions/expenses', async (c) => {
   try {
 
     const authorization = c.req.header('Authorization')
@@ -100,6 +102,8 @@ starsoftController.post('/bank-transactions/expenses', async (c) => {
     const dateStart = c.req.query('dateStart')
     const dateEnd = c.req.query('dateEnd')
     const currency = c.req.query('currency')
+    const subsidiaryId = c.req.query('subsidiaryId')
+
 
     const comMsTypeDocumentsRepo = datasource.sales.getRepository(ComMsTypeDocuments);
 
@@ -133,7 +137,7 @@ LEFT JOIN ms_person AS mp
     ON mp.id = ps.person_id
 INNER JOIN ms_type_transaction_bank AS mttb 
     ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date > ? AND ctb.payment_date < ? AND currency = ?;`, [aclCredentials.company.id, dateStart, dateEnd, currency]);
+WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId]);
 
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
