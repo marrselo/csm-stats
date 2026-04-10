@@ -40,8 +40,7 @@ starsoftController.get('/bank-transactions/income', async (c) => {
     const typeDocuments = await comMsTypeDocumentsRepo.find()
     const typeDocumentsMap = new Map(typeDocuments.map(t => [t.id, t]))
 
-
-    const rawBankTransactions = await datasource.sales.query(`
+    const sqlQuery = `
 SELECT
     cad.id AS amortizationDetailId,
     cad.amount AS amortizationAmount,
@@ -67,8 +66,13 @@ LEFT JOIN ms_person AS mp
     ON mp.id = cc.person_id
 INNER JOIN ms_type_transaction_bank AS mttb 
     ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId]);
+WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`
 
+    const rawBankTransactions = await datasource.sales.query(sqlQuery, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId]);
+
+    console.log(sqlQuery, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId])
+
+    console.log(rawBankTransactions)
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
       return {
