@@ -21,6 +21,7 @@ import { proxyC3Controller } from "./csm-c3-proxy";
 import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { proxyOpenaiController } from "./openai-proxy";
+import { starsoftController } from "./starsoft.controller";
 
 process.env.TZ = "UTC";
 const app = new Hono();
@@ -740,6 +741,7 @@ app.get("warehouses", async (c) => {
 
 app.route("c3-proxy", proxyC3Controller);
 app.route("openai-proxy", proxyOpenaiController);
+app.route("starsoft", starsoftController);
 
 export default {
   port: process.env.PORT || 3000,

@@ -20,6 +20,7 @@ import { WarProduct } from "./csm-product/war-product.entity";
 import { CsmTypeDocument } from "./csm-document-type.entity";
 import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
+import { ComMsTypeDocuments } from "./com-ms-type-documents.entity";
 
 const client = new SecretsManagerClient({
   region: "us-east-1"
@@ -120,6 +121,7 @@ async function initDbs() {
           SalTerminal,
           CsmTypeDocument,
           SalOrders,
+          ComMsTypeDocuments
         ],
         synchronize: false,
         logging: process.env.TYPEORM_LOGS === "true",
