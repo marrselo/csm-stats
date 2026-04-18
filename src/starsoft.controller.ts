@@ -50,6 +50,7 @@ SELECT
     cad.amount AS amortizationAmount,
     mttb.code AS typeTransactionBankCode,
     ctb.currency,
+    ctb.concept,
     DATE_FORMAT(ctb.payment_date, '%Y-%m-%d') AS paymentDate,
     proof_document.document_number AS proofNumber,
     DATE_FORMAT(CONVERT_TZ(proof_document.date_emission, '+05:00', '+00:00'), '%Y-%m-%d') AS proofEmissionDate,
@@ -76,7 +77,6 @@ WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AN
 
     console.log(sqlQuery, [aclCredentials.company.id, dateStart, dateEnd, currency, subsidiaryId])
 
-    console.log({ rawBankTransactions })
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
       return {
@@ -128,6 +128,7 @@ SELECT
     cad.amount AS amortizationAmount,
     mttb.code AS typeTransactionBankCode,
     ctb.currency,
+    ctb.concept,
     DATE_FORMAT(ctb.payment_date, '%Y-%m-%d') AS paymentDate,
     proof_document.document_number AS proofNumber,
     DATE_FORMAT(CONVERT_TZ(proof_document.date_document, '+05:00', '+00:00'), '%Y-%m-%d') AS proofEmissionDate,
