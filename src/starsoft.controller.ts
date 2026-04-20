@@ -138,7 +138,7 @@ starsoftController.get('/bank-transactions/expenses', async (c) => {
 
     const proofDocuments = await datasource.sales.query(`
 SELECT
-    proof_document.id
+    proof_document.id,
     proof_document.document_number AS proofNumber,
     DATE_FORMAT(CONVERT_TZ(proof_document.date_document, '+05:00', '+00:00'), '%Y-%m-%d') AS proofEmissionDate,
     proof_document.type_document_id AS proofTypeId,
