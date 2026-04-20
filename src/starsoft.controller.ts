@@ -71,7 +71,7 @@ LEFT JOIN ms_person AS mp
     ON mp.id = cc.person_id
 INNER JOIN ms_type_transaction_bank AS mttb 
     ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`
+WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 1 AND ctb.payment_date >= ? AND ctb.payment_date <= ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`
 
     const rawBankTransactions = await datasource.sales.query(sqlQuery, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
 
@@ -149,7 +149,7 @@ LEFT JOIN ms_person AS mp
     ON mp.id = ps.person_id
 INNER JOIN ms_type_transaction_bank AS mttb 
     ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date > ? AND ctb.payment_date < ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
+WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date >= ? AND ctb.payment_date <= ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
 
     const transactions = rawBankTransactions.map((t: any) => {
       const typeDocument = typeDocumentsMap.get(t.proofTypeId)
