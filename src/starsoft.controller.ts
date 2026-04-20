@@ -147,7 +147,7 @@ LEFT JOIN pur_suppliers AS ps
     ON ps.id = proof_document.supplier_id
 LEFT JOIN ms_person AS mp 
     ON mp.id = ps.person_id
-WHERE proof_document.id IN (${bankTransactions.filter((t: any) => t.pur_documents_id !== null).map((t: any) => t.pur_documents_id).join(',')});`);
+WHERE proof_document.id IN (${bankTransactions.filter((t: any) => t.proofDocumentId !== null).map((t: any) => t.proofDocumentId).join(',')});`);
 
     const proofDocumentsMap: Map<number, { proofNumber: string, proofEmissionDate: string, proofTypeId: number, customerDocument: string }> = new Map(proofDocuments.map((t: any) => [t.id, t]))
 
