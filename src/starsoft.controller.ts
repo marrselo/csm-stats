@@ -122,40 +122,44 @@ starsoftController.get('/bank-transactions/expenses', async (c) => {
     const typeDocumentsMap = new Map(typeDocuments.map(t => [t.id, t]))
 
 
-    const rawBankTransactions = await datasource.sales.query(`
+    const bankTransactions = await datasource.sales.query(`
+      SELECT 
+      ctb.amount,
+      mttb.code AS typeTransactionBankCode,
+      ctb.currency,
+      ctb.concept,
+      DATE_FORMAT(ctb.payment_date, '%Y-%m-%d') AS paymentDate,
+      ctb.document_number as operationNumber,
+      ctb.pur_documents_id AS proofDocumentId
+      FROM com_transaction_bank AS ctb 
+      LEFT JOIN ms_type_transaction_bank AS mttb ON mttb.id = ctb.type_transaction_bank_id
+      WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date >= ? AND ctb.payment_date <= ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
+
+
+    const proofDocuments = await datasource.sales.query(`
 SELECT
-    cad.id AS amortizationDetailId,
-    cad.amount AS amortizationAmount,
-    mttb.code AS typeTransactionBankCode,
-    ctb.currency,
-    ctb.concept,
-    DATE_FORMAT(ctb.payment_date, '%Y-%m-%d') AS paymentDate,
     proof_document.document_number AS proofNumber,
     DATE_FORMAT(CONVERT_TZ(proof_document.date_document, '+05:00', '+00:00'), '%Y-%m-%d') AS proofEmissionDate,
     proof_document.type_document_id AS proofTypeId,
-    mp.document_number AS customerDocument,
-    ca.operation_number AS operationNumber
-FROM ca_amortizations_details AS cad
-INNER JOIN ca_amortizations AS ca 
-    ON ca.id = cad.amortization_id
-INNER JOIN com_transaction_bank AS ctb 
-    ON ctb.id = ca.transaction_bank_id
-INNER JOIN pur_documents AS proof_document 
-    ON proof_document.id = cad.pur_document_id
-    OR proof_document.id = ctb.pur_documents_id
+    mp.document_number AS customerDocument
+FROM pur_documents AS proof_document 
 LEFT JOIN pur_suppliers AS ps 
     ON ps.id = proof_document.supplier_id
 LEFT JOIN ms_person AS mp 
     ON mp.id = ps.person_id
-INNER JOIN ms_type_transaction_bank AS mttb 
-    ON mttb.id = ctb.type_transaction_bank_id
-WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date >= ? AND ctb.payment_date <= ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`, [company.id, dateStart, dateEnd, currency, subsidiaryId]);
+WHERE proof_document.id IN (${bankTransactions.filter((t: any) => t.pur_documents_id !== null).map((t: any) => t.pur_documents_id).join(',')});`);
 
-    const transactions = rawBankTransactions.map((t: any) => {
-      const typeDocument = typeDocumentsMap.get(t.proofTypeId)
+    const proofDocumentsMap: Map<number, { proofNumber: string, proofEmissionDate: string, proofTypeId: number, customerDocument: string }> = new Map(proofDocuments.map((t: any) => [t.id, t]))
+
+    const transactions = bankTransactions.map((t: any) => {
+      const proofDocument = proofDocumentsMap.get(t.proofDocumentId)
+      const typeDocument = typeDocumentsMap.get(proofDocument?.proofTypeId)
       return {
         ...t,
         proofTypeCode: typeDocument?.code,
+        proofNumber: `${typeDocument?.qpCode}${proofDocument?.proofNumber}`,
+        proofEmissionDate: proofDocument?.proofEmissionDate ?? null,
+        customerDocument: proofDocument?.customerDocument ?? null,
       }
     })
     return c.json(transactions, 200)
