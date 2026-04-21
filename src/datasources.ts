@@ -23,7 +23,7 @@ import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { ComMsTypeDocuments } from "./com-ms-type-documents.entity";
 
 const client = new SecretsManagerClient({
-  region: "us-east-1"
+  region: "us-east-1",
 });
 
 async function getSecret(secretName: string): Promise<{
@@ -121,7 +121,7 @@ async function initDbs() {
           SalTerminal,
           CsmTypeDocument,
           SalOrders,
-          ComMsTypeDocuments
+          ComMsTypeDocuments,
         ],
         synchronize: false,
         logging: process.env.TYPEORM_LOGS === "true",

@@ -45,7 +45,7 @@ function getMonthUnixRange(date: Date): { start: number; end: number } {
     23,
     59,
     59,
-    999
+    999,
   );
 
   return {
@@ -125,7 +125,7 @@ interface AbstractResponse {
 
 function getMonthByUnixTime(
   time: number,
-  ranges: { monthName: string; start: number; end: number }[]
+  ranges: { monthName: string; start: number; end: number }[],
 ) {
   for (const range of ranges) {
     if (range.start <= time && time <= range.end) {
@@ -143,7 +143,7 @@ async function getDataLastMonths(
   docTypesMap: Record<string, CsmTypeDocument>,
   csmPurchasesRepo: Repository<PurDocuments>,
   csmCompany: ComCompanies,
-  csmOrdersRepo: Repository<SalOrders>
+  csmOrdersRepo: Repository<SalOrders>,
 ) {
   const today = new Date();
   // today.setDate(today.getDate());
@@ -221,10 +221,10 @@ async function getDataLastMonths(
               },
               orders_amount: 0,
             },
-          ])
+          ]),
         ),
       },
-    ])
+    ]),
   );
   const monthsData = Object.fromEntries(
     months.map((r) => [
@@ -242,7 +242,7 @@ async function getDataLastMonths(
         orders_amount: 0,
         orders_types_count: { total: 0, facturas: 0, boletas: 0, otros: 0 },
       },
-    ])
+    ]),
   );
 
   sales.forEach((sal: AbstractSale) => {
@@ -375,7 +375,7 @@ async function getDataLastMonths(
 app.get("abstract/acl-code/:aclCode", async (c) => {
   const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
   const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
-  const companyAclCode = c.req.param().aclCode
+  const companyAclCode = c.req.param().aclCode;
   const aclCompany = await aclCompanyRepo.findOneBy({
     codeCompany: companyAclCode,
   });
@@ -388,7 +388,10 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
   });
 
   if (!aclTemplate) {
-    return c.json({ error: `ACL Template  ${aclCompany.templateId} not found` }, 400);
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
   }
 
   // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
@@ -397,17 +400,15 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     .endPoint.replace("https://", "")
     .split(".")[0];
 
-
   if (!csmNode) {
-    console.log('CSM NODE not found', aclTemplate?.settings)
+    console.log("CSM NODE not found", aclTemplate?.settings);
     return c.json({ error: `Node not found` }, 400);
-
   }
 
   const datasource = getDatasource(csmNode);
 
   if (!datasource) {
-    console.log('Datasource not found', aclTemplate?.settings)
+    console.log("Datasource not found", aclTemplate?.settings);
     return c.json({ error: `DataSource ${csmNode} not found` }, 400);
   }
 
@@ -435,7 +436,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
   const documentTypes = await csmDocumentTypesRepo.find();
 
   const docTypesMap = Object.fromEntries(
-    documentTypes.map((dt) => [dt.id, dt])
+    documentTypes.map((dt) => [dt.id, dt]),
   );
 
   const csmSubsidiariesRepo = datasource.sales.getRepository(ComSubsidiaries);
@@ -466,7 +467,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     select: { id: true, documentTypeName: true },
   });
   const documentsKardexEntries = documentsKardex.filter(
-    (dk) => dk.documentTypeName?.trim() === "Ingreso de Mercaderia"
+    (dk) => dk.documentTypeName?.trim() === "Ingreso de Mercaderia",
   );
 
   const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
@@ -497,11 +498,11 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
     docTypesMap,
     csmPurchasesRepo,
     csmCompany,
-    csmOrdersRepo
+    csmOrdersRepo,
   );
   const warehousesData: AbstractWarehouse[] = [];
   const last_three_months: AbstractMonthData[] = Object.values(
-    abstractData.monthsData
+    abstractData.monthsData,
   );
   for (const warehouseId in abstractData.warehousesMonthsData) {
     const warehouse = warehousesMap[warehouseId];
@@ -606,9 +607,9 @@ app.get("abstract-company/acl-id/:aclId", async (c) => {
     .endPoint.replace("https://", "")
     .split(".")[0];
 
-  const urls = Object.fromEntries(aclTemplate?.settings.domains
-    .map((d: any) => [d.code, d.endPoint]))
-
+  const urls = Object.fromEntries(
+    aclTemplate?.settings.domains.map((d: any) => [d.code, d.endPoint]),
+  );
 
   return c.json({
     csm_node: nodeName,
@@ -617,7 +618,7 @@ app.get("abstract-company/acl-id/:aclId", async (c) => {
     acl_template: aclTemplate?.name,
     company_ruc: aclCompany?.ruc,
     company_name: aclCompany?.nombreComercial,
-    urls
+    urls,
   });
 });
 
@@ -671,7 +672,7 @@ app.get("warehouses", async (c) => {
         .split(".")[0];
 
       return [t.id, csmNode];
-    })
+    }),
   );
 
   const groups: Record<

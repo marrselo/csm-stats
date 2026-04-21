@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
 @Index("com_ms_type_documents_com_country_id_foreign", ["comCountryId"], {})
 @Index("flag_type", ["flagType"], {})
