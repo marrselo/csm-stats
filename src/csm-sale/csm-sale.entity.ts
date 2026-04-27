@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   DeleteDateColumn,
 } from "typeorm";
+import { DecimalTransformer } from "../typeorm-transformers/decimal-transaformer";
 
 @Entity("sal_documents", { schema: "dp6_quipu_prod" })
 export class SalDocuments {
@@ -67,40 +68,80 @@ export class SalDocuments {
   @Column({ name: "currency", type: "varchar" })
   currency?: string;
 
-  @Column({ name: "amount", type: "decimal" })
+  @Column({
+    name: "amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   amount?: number;
 
-  @Column({ name: "subsidy_amount", type: "decimal" })
+  @Column({
+    name: "subsidy_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   subsidyAmount?: number;
 
-  @Column({ name: "balance", type: "decimal" })
+  @Column({
+    name: "balance",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   balance?: number;
 
-  @Column({ name: "due_amount", type: "decimal" })
+  @Column({
+    name: "due_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   dueAmount?: number;
 
-  @Column({ name: "amount_cash", type: "decimal" })
+  @Column({
+    name: "amount_cash",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   amountCash?: number;
 
-  @Column({ name: "amount_credit", type: "decimal" })
+  @Column({
+    name: "amount_credit",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   amountCredit?: number;
 
   @Column({ name: "credit_card_name", type: "varchar" })
   creditCardName?: string;
 
-  @Column({ name: "subtotal", type: "decimal" })
+  @Column({
+    name: "subtotal",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   subtotal?: number;
 
-  @Column({ name: "taxes", type: "decimal" })
+  @Column({
+    name: "taxes",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   taxes?: number;
 
-  @Column({ name: "taxes_isc", type: "decimal" })
+  @Column({
+    name: "taxes_isc",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   taxesIsc?: number;
 
   @Column({ name: "total_points", type: "int" })
   totalPoints?: number;
 
-  @Column({ name: "change", type: "decimal" })
+  @Column({
+    name: "change",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   change?: number;
 
   @Column({ name: "flag_type_return", type: "int" })
@@ -124,7 +165,11 @@ export class SalDocuments {
   @Column({ name: "ticket_number", type: "varchar" })
   ticketNumber?: string;
 
-  @Column({ name: "exchange_amount", type: "decimal" })
+  @Column({
+    name: "exchange_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   exchangeAmount?: number;
 
   @Column({ name: "data_client", type: "json" })
@@ -184,10 +229,18 @@ export class SalDocuments {
   @Column({ name: "date_cancel", type: "date" })
   dateCancel?: Date;
 
-  @Column({ name: "exchange_rate", type: "decimal" })
+  @Column({
+    name: "exchange_rate",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   exchangeRate?: number;
 
-  @Column({ name: "payment_amount", type: "decimal" })
+  @Column({
+    name: "payment_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   paymentAmount?: number;
 
   @Column({ name: "commerce_code", type: "varchar" })
@@ -232,10 +285,18 @@ export class SalDocuments {
   @Column({ name: "reason", type: "text" })
   reason?: string;
 
-  @Column({ name: "discount", type: "decimal" })
+  @Column({
+    name: "discount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   discount?: number;
 
-  @Column({ name: "tip", type: "decimal" })
+  @Column({
+    name: "tip",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   tip?: number;
 
   @Column({ name: "considerations", type: "json" })
@@ -364,7 +425,11 @@ export class SalDocuments {
   @Column({ name: "withholding_taxes", type: "json" })
   withholdingTaxes?: any;
 
-  @Column({ name: "total_without_withholding", type: "decimal" })
+  @Column({
+    name: "total_without_withholding",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   totalWithoutWithholding?: number;
 
   @Column({ name: "status_withholding", type: "int" })
@@ -409,6 +474,10 @@ export class SalDocuments {
   @Column({ name: "updated_at", type: "timestamp" })
   updatedAt?: Date;
 
-  @Column({ name: "discount_global", type: "decimal" })
+  @Column({
+    name: "discount_global",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   discountGlobal?: number;
 }

@@ -1,4 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, Index } from "typeorm";
+import { DecimalTransformer } from "../typeorm-transformers/decimal-transaformer";
 
 @Entity("abstract_sale", { schema: "dp6_quipu_prod" })
 @Index("idx_abstract_sale_acl_id_created_at", ["aclId", "createdAt"])
@@ -18,17 +19,18 @@ export class AbstractSale {
   @Column({ name: "terminal_id" })
   terminalId: number;
 
-  // @Column({ name: 'company_id' })
-  // companyId: number
-
-  @Column({ name: "amount" })
+  @Column({
+    name: "amount",
+    type: "decimal",
+    precision: 12,
+    scale: 2,
+    nullable: true,
+    transformer: new DecimalTransformer(),
+  })
   amount: number;
 
   @Column({ name: "type" })
   type: number;
-
-  // @Column({ name: 'emitted_at' })
-  // emittedAt: number
 
   @Column({ name: "state" })
   state: number;

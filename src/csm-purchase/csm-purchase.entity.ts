@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   DeleteDateColumn,
 } from "typeorm";
+import { DecimalTransformer } from "../typeorm-transformers/decimal-transaformer";
 
 @Entity("pur_documents", { schema: "dp6_quipu_prod" })
 export class PurDocuments {
@@ -70,19 +71,39 @@ export class PurDocuments {
   @Column({ name: "type_catalog_id", type: "int" })
   typeCatalogId?: number;
 
-  @Column({ name: "due_amount", type: "decimal" })
+  @Column({
+    name: "due_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   dueAmount?: number;
 
-  @Column({ name: "exchange_rate", type: "decimal" })
+  @Column({
+    name: "exchange_rate",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   exchangeRate?: number;
 
-  @Column({ name: "exchange_amount", type: "decimal" })
+  @Column({
+    name: "exchange_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   exchangeAmount?: number;
 
-  @Column({ name: "discount_percentage", type: "decimal" })
+  @Column({
+    name: "discount_percentage",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   discountPercentage?: number;
 
-  @Column({ name: "discount_amount", type: "decimal" })
+  @Column({
+    name: "discount_amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   discountAmount?: number;
 
   @Column({ name: "type_billing", type: "int" })
@@ -124,19 +145,35 @@ export class PurDocuments {
   @Column({ name: "currency", type: "varchar" })
   currency?: string;
 
-  @Column({ name: "amount", type: "decimal" })
+  @Column({
+    name: "amount",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   amount?: number;
 
-  @Column({ name: "sub_total", type: "decimal" })
+  @Column({
+    name: "sub_total",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   subTotal?: number;
 
-  @Column({ name: "total_without_withholding", type: "decimal" })
+  @Column({
+    name: "total_without_withholding",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   totalWithoutWithholding?: number;
 
   @Column({ name: "additional_information", type: "json" })
   additionalInformation?: any;
 
-  @Column({ name: "taxes", type: "decimal" })
+  @Column({
+    name: "taxes",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   taxes?: number;
 
   @Column({ name: "flag_includes_taxes", type: "tinyint" })
@@ -145,7 +182,11 @@ export class PurDocuments {
   @Column({ name: "withholding_tax_id", type: "int" })
   withholdingTaxId?: number;
 
-  @Column({ name: "total_perception", type: "decimal" })
+  @Column({
+    name: "total_perception",
+    type: "decimal",
+    transformer: new DecimalTransformer(),
+  })
   totalPerception?: number;
 
   @Column({ name: "perception", type: "json" })

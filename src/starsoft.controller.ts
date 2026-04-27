@@ -144,7 +144,16 @@ starsoftController.get("/bank-transactions/expenses", async (c) => {
     const typeDocuments = await comMsTypeDocumentsRepo.find();
     const typeDocumentsMap = new Map(typeDocuments.map((t) => [t.id, t]));
 
-    const bankTransactions: { id: number, amount: number, typeTransactionBankCode: string, currency: string, concept: string, paymentDate: string, operationNumber: string, proofDocumentId: number }[] = await datasource.sales.query(
+    const bankTransactions: {
+      id: number;
+      amount: number;
+      typeTransactionBankCode: string;
+      currency: string;
+      concept: string;
+      paymentDate: string;
+      operationNumber: string;
+      proofDocumentId: number;
+    }[] = await datasource.sales.query(
       `
       SELECT
       ctb.id,
@@ -166,7 +175,7 @@ starsoftController.get("/bank-transactions/expenses", async (c) => {
       .map((t: any) => t.proofDocumentId);
     if (proofDocumentsIds.length) {
       const proofDocuments: {
-        id: number,
+        id: number;
         proofNumber: string;
         proofEmissionDate: string;
         proofTypeId: number;
@@ -192,7 +201,7 @@ WHERE proof_document.id IN (${proofDocumentsIds.join(",")});`);
         const typeDocument = typeDocumentsMap.get(proofDocument?.proofTypeId);
         return {
           ...t,
-          proofTypeCode: typeDocument?.code,
+          proofTypeCode: typeDocument?.code || null,
           proofNumber: proofDocument
             ? `${typeDocument?.qpCode}${proofDocument?.proofNumber}`
             : t.operationNumber,
@@ -201,9 +210,7 @@ WHERE proof_document.id IN (${proofDocumentsIds.join(",")});`);
         };
       });
       return c.json(transactions, 200);
-
     }
-
 
     const transactions = bankTransactions.map((t) => {
       return {
