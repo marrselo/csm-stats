@@ -202,9 +202,7 @@ WHERE proof_document.id IN (${proofDocumentsIds.join(",")});`);
         return {
           ...t,
           proofTypeCode: typeDocument?.code || null,
-          proofNumber: proofDocument
-            ? `${typeDocument?.qpCode}${proofDocument?.proofNumber}`
-            : t.operationNumber,
+          proofNumber: proofDocument?.proofNumber ?? t.operationNumber,
           proofEmissionDate: proofDocument?.proofEmissionDate ?? null,
           customerDocument: proofDocument?.customerDocument ?? null,
         };

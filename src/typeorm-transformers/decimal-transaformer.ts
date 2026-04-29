@@ -1,9 +1,9 @@
 export class DecimalTransformer {
   to(data: number | null | undefined): number | null | undefined {
-    return data === null || data === undefined ? null : data;
+    return data;
   }
 
-  from(data: string | null | undefined): number | null | undefined {
-    return data === null || data === undefined ? null : parseFloat(data);
+  from(data: string | null | undefined): number | null {
+    return data === null || data === undefined ? null : Number(data);
   }
 }
