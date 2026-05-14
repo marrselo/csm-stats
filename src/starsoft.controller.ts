@@ -192,7 +192,7 @@ SELECT
     proof_document.type_document_id AS proofTypeId,
     proof_document.supplier_id AS proofSupplierId,
     mp.document_number AS supplierDocument,
-    mp.full_name AS supplierName
+    mp.fullname AS supplierName
 FROM pur_documents AS proof_document 
 LEFT JOIN pur_suppliers AS ps 
     ON ps.id = proof_document.supplier_id
