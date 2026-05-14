@@ -98,6 +98,7 @@ interface AbstractWarehouse {
   address: string;
   location: { x: number; y: number } | null;
   enable: boolean;
+  item: string,
   last_three_months: AbstractMonthData[];
 }
 
@@ -518,6 +519,7 @@ app.get("abstract/acl-code/:aclCode", async (c) => {
       address: warehouse.address ?? "",
       location: warehouse.location ?? null,
       enable: Boolean(warehouse.flagActive),
+      item: warehouse.settings?.item || "",
       last_three_months: Object.values(warMonthData.months),
     });
   }
