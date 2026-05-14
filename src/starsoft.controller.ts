@@ -153,6 +153,7 @@ starsoftController.get("/bank-transactions/expenses", async (c) => {
       paymentDate: string;
       operationNumber: string;
       proofDocumentId: number;
+      transactionSupplierId:number;
     }[] = await datasource.sales.query(
       `
       SELECT
@@ -163,7 +164,8 @@ starsoftController.get("/bank-transactions/expenses", async (c) => {
       ctb.concept,
       DATE_FORMAT(ctb.payment_date, '%Y-%m-%d') AS paymentDate,
       ctb.document_number as operationNumber,
-      ctb.pur_documents_id AS proofDocumentId
+      ctb.pur_documents_id AS proofDocumentId,
+      ctb.supplier_id AS transactionSupplierId
       FROM com_transaction_bank AS ctb 
       LEFT JOIN ms_type_transaction_bank AS mttb ON mttb.id = ctb.type_transaction_bank_id
       WHERE ctb.deleted_at IS NULL AND ctb.company_id = ? AND ctb.type_movement = 2 AND ctb.payment_date >= ? AND ctb.payment_date <= ? AND ctb.currency = ? AND ctb.subsidiary_id = ?;`,
@@ -179,14 +181,18 @@ starsoftController.get("/bank-transactions/expenses", async (c) => {
         proofNumber: string;
         proofEmissionDate: string;
         proofTypeId: number;
-        customerDocument: string;
+        supplierDocument: string;
+        proofSupplierId: number;
+        supplierName: string;
       }[] = await datasource.sales.query(`
 SELECT
     proof_document.id,
     proof_document.document_number AS proofNumber,
     DATE_FORMAT(CONVERT_TZ(proof_document.date_document, '+05:00', '+00:00'), '%Y-%m-%d') AS proofEmissionDate,
     proof_document.type_document_id AS proofTypeId,
-    mp.document_number AS customerDocument
+    proof_document.supplier_id AS proofSupplierId,
+    mp.document_number AS supplierDocument,
+    mp.full_name AS supplierName
 FROM pur_documents AS proof_document 
 LEFT JOIN pur_suppliers AS ps 
     ON ps.id = proof_document.supplier_id
@@ -201,10 +207,11 @@ WHERE proof_document.id IN (${proofDocumentsIds.join(",")});`);
         const typeDocument = typeDocumentsMap.get(proofDocument?.proofTypeId);
         return {
           ...t,
+          ...proofDocument,
           proofTypeCode: typeDocument?.code || null,
           proofNumber: proofDocument?.proofNumber ?? t.operationNumber,
           proofEmissionDate: proofDocument?.proofEmissionDate ?? null,
-          customerDocument: proofDocument?.customerDocument ?? null,
+          supplierDocument: proofDocument?.supplierDocument ?? null,
         };
       });
       return c.json(transactions, 200);
