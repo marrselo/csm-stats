@@ -904,10 +904,10 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
   for (const date in abstractData) {
     const dateData = abstractData[date]
 
-    const dd = { date, terminals: [] }
+    // const dd = { date, terminals: [] }
     for (const terminal of terminals) {
       const d = {
-        warehouseId: terminal.warWarehousesId,
+        date,
         terminalId: terminal.id,
         salesAmount: dateData.sales.terminals[terminal.id]?.totalAmount ?? 0,
         salesCount: dateData.sales.terminals[terminal.id]?.totalCount ?? 0,
@@ -919,13 +919,13 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
         ordersCount: dateData.orders.terminals[terminal.id]?.totalCount ?? 0,
       }
 
-      dd.terminals.push(d)
+      finalData.push(d)
     }
-    finalData.push(dd)
+    // finalData.push(dd)
 
 
   }
-  return c.json({ terminals, warehouses, subsidiaries, finalData, skusCount });
+  return c.json({ terminals, warehouses, subsidiaries, abstractData:finalData, skusCount });
 
 });
 
