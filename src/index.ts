@@ -865,8 +865,6 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
   );
 
 
-
-
   if (c.req.query('format') === 'csv') {
     const finalData = [
       ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count', 'purchases_amount', 'purchases_count', 'cash_closings_amount', 'cash_closings_count', 'orders_amount', 'orders_count']
@@ -899,7 +897,7 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
 
     }
 
-    return finalData.map(l => l.join(',')).join('\n')
+    return c.text(finalData.map(l => l.join(',')).join('\n'))
   }
 
 
