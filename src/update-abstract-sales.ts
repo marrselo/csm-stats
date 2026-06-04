@@ -108,7 +108,7 @@ export async function updateAbstractSales(
     console.log(`📥 Scanning rows ${fromId} - ${toId} `);
 
     const sales = await csmSalesRepo.find({
-      where: { id: Between(fromId, toId), deletedAt: IsNull() },
+      where: { id: Between(fromId, toId) },
       select: {
         id: true,
         companyId: true,
@@ -124,6 +124,7 @@ export async function updateAbstractSales(
     if (sales && sales.length) {
       const salesToInsert: AbstractSale[] = [];
       sales.forEach((sale) => {
+        if(sale.deletedAt) return
         const aclId = companiesMap[sale.companyId];
         if (!aclId) return;
         const createdAt = sale.creationGeneratedAt

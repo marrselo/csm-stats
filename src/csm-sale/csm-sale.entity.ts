@@ -456,7 +456,7 @@ export class SalDocuments {
   @Column({ name: "day_number", type: "int" })
   dayNumber?: number;
 
-  @DeleteDateColumn({ name: "deleted_at", type: "timestamp" })
+  @Column({ name: "deleted_at", type: "timestamp" })
   deletedAt?: Date;
 
   @Column({ name: "synced_at", type: "timestamp" })

@@ -328,10 +328,6 @@ export async function getAbstractData(
             const terminalId = cashClosing.terminalId
             if (!terminalId) return;
 
-
-
-
-
             const companyId = cashClosing.companyId
             if (!companyId) return;
 
@@ -378,6 +374,7 @@ export async function getAbstractData(
                 total: true,
                 terminalId: true,
                 subsidiaryId: true,
+                deletedAt:true
             },
         });
         orders.forEach((order: SalOrders) => {
