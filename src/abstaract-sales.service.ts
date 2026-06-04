@@ -194,7 +194,7 @@ export async function getAbstractData(
 
         const saleDate = new Date(sal.createdAt)
         if (Number.isNaN(saleDate.getTime())) return;
-        const dateString = saleDate.toISOString().split('Z').shift() as string;
+        const dateString = saleDate.toISOString().split('T').shift() as string;
 
         const dateData = abstractData[dateString];
 
@@ -242,7 +242,7 @@ export async function getAbstractData(
         if (!pur.documentDateNumber) return;
         const saleDate = new Date(pur.documentDateNumber)
         if (Number.isNaN(saleDate.getTime())) return;
-        const dateString = saleDate.toISOString().split('Z').shift() as string;
+        const dateString = saleDate.toISOString().split('T').shift() as string;
 
         const dateData = abstractData[dateString];
 
@@ -290,7 +290,7 @@ export async function getAbstractData(
         if (!cashClosing.closedAt) return;
         const date = cashClosing.closedAt
         if (Number.isNaN(date.getTime())) return;
-        const dateString = date.toISOString().split('Z').shift() as string;
+        const dateString = date.toISOString().split('T').shift() as string;
 
         const dateData = abstractData[dateString];
 
@@ -336,7 +336,7 @@ export async function getAbstractData(
         if (!order.createdAtNumber) return;
         const date = new Date(order.createdAtNumber)
         if (Number.isNaN(date.getTime())) return;
-        const dateString = date.toISOString().split('Z').shift() as string;
+        const dateString = date.toISOString().split('T').shift() as string;
 
         const dateData = abstractData[dateString];
 
