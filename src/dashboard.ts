@@ -1,8 +1,10 @@
-export const htmlDashboard = (aclCode:string)=>`<!DOCTYPE html>
+import { AclCompany } from "./acl-company/acl-company.entity";
+
+export const htmlDashboard = (aclCompany:AclCompany)=>`<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Dashboard Pro</title>
+<title>Dashboard ${aclCompany.nombreComercial}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -41,7 +43,7 @@ canvas {
 
 <body>
 
-<h1>📊 Dashboard Comercial</h1>
+<h1>📊 Dashboard Comercial - ${aclCompany.nombreComercial} - ${aclCompany.ruc}</h1>
 
 <div class="controls">
   <label>Agrupar:
@@ -94,7 +96,7 @@ canvas {
 </div>
 
 <script>
-const API_URL = "https://stats.casamarketapp.com/abstract/dates/acl-code/${aclCode}?format=json"
+const API_URL = "https://stats.casamarketapp.com/abstract/dates/acl-code/${aclCompany.codeCompany}?format=json"
 
 let data;
 let charts = {};
