@@ -5,7 +5,6 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
-import { MysqlConnectionOptions } from "typeorm/driver/mysql/MysqlConnectionOptions";
 import { ComCompanies } from "./csm-company/csm-company.entity";
 import { WarWarehouses } from "./csm-warehouse/csm-warehouse.entity";
 import { ComDelivery } from "./csm-delivery/csm-delivery.entity";
@@ -21,6 +20,8 @@ import { CsmTypeDocument } from "./csm-document-type.entity";
 import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { ComMsTypeDocuments } from "./com-ms-type-documents.entity";
+import { DataSourceOptions } from "typeorm/browser";
+import { SalCashDeskClosing } from "./SalCashDeskClosing";
 
 const client = new SecretsManagerClient({
   region: "us-east-1",
@@ -92,7 +93,7 @@ export let aclDataSource: DataSource;
 
 async function initDbs() {
   const secretValueAcl = await getSecret("secret-dbAcl");
-  const datasourceConfigAcl: MysqlConnectionOptions = {
+  const datasourceConfigAcl: DataSourceOptions = {
     type: "mysql",
     host: secretValueAcl.host,
     port: Number(secretValueAcl.port),
@@ -108,7 +109,7 @@ async function initDbs() {
   for (const secrets of secretsNames) {
     try {
       const secretValueSales = await getSecret(secrets.sales);
-      const datasourceConfig: MysqlConnectionOptions = {
+      const datasourceConfig: DataSourceOptions = {
         type: "mysql",
         host: secretValueSales.host,
         port: Number(secretValueSales.port),
@@ -127,6 +128,7 @@ async function initDbs() {
           CsmTypeDocument,
           SalOrders,
           ComMsTypeDocuments,
+          SalCashDeskClosing
         ],
         synchronize: false,
         logging: process.env.TYPEORM_LOGS === "true",
@@ -135,7 +137,7 @@ async function initDbs() {
         datasourceConfig,
       ).initialize();
       const secretValueProducts = await getSecret(secrets.products);
-      const datasourceConfigProducts: MysqlConnectionOptions = {
+      const datasourceConfigProducts: DataSourceOptions = {
         type: "mysql",
         host: secretValueProducts.host,
         port: Number(secretValueProducts.port),

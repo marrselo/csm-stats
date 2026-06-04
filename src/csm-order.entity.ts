@@ -16,7 +16,9 @@ import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 @Index(
   "search_sal_orders",
   ["channel", "warehouseName", "warehouseAddress", "comments"],
-  { fulltext: true },
+  {
+    fulltext: true,
+  },
 )
 @Index("subsidiary_order_state_fk", ["subsidiaryId"], {})
 @Index("terminal_id_sal_orders", ["terminalId"], {})
@@ -53,7 +55,6 @@ export class SalOrders {
     name: "flag_sale",
     nullable: true,
     comment: "Documento de Venta: 0 Sin Convertir - 1 Convertido",
-    width: 1,
     default: () => "'0'",
   })
   flagSale: boolean | null;
@@ -61,7 +62,6 @@ export class SalOrders {
   @Column("tinyint", {
     name: "flag_guides",
     nullable: true,
-    width: 1,
     default: () => "'0'",
   })
   flagGuides: boolean | null;
@@ -73,7 +73,6 @@ export class SalOrders {
     name: "flag_pick_up",
     nullable: true,
     comment: "1: Domicilio, 2: Tienda",
-    width: 1,
   })
   flagPickUp: boolean | null;
 
@@ -136,7 +135,6 @@ export class SalOrders {
     name: "flag_bill",
     nullable: true,
     comment: "true: emite facturacion, false: no emite factura",
-    width: 1,
     default: () => "'0'",
   })
   flagBill: boolean | null;
@@ -147,7 +145,7 @@ export class SalOrders {
   @Column("text", { name: "document_number_relate", nullable: true })
   documentNumberRelate: string | null;
 
-  @Column("tinyint", { name: "flag_document", nullable: true, width: 1 })
+  @Column("tinyint", { name: "flag_document", nullable: true})
   flagDocument: boolean | null;
 
   @Column("int", { name: "way_payment_id", nullable: true, unsigned: true })
@@ -283,7 +281,6 @@ export class SalOrders {
   @Column("tinyint", {
     name: "cost_shipping_flag_tax",
     nullable: true,
-    width: 1,
     default: () => "'0'",
   })
   costShippingFlagTax: boolean | null;
@@ -331,7 +328,6 @@ export class SalOrders {
   @Column("tinyint", {
     name: "flag_involve_stock",
     nullable: true,
-    width: 1,
     default: () => "'0'",
   })
   flagInvolveStock: boolean | null;
@@ -348,7 +344,6 @@ export class SalOrders {
   @Column("tinyint", {
     name: "flag_approval",
     nullable: true,
-    width: 1,
     default: () => "'0'",
   })
   flagApproval: boolean | null;
@@ -369,7 +364,6 @@ export class SalOrders {
     name: "flag_money_taken_driver",
     nullable: true,
     comment: "Flag que indica si el repartidor recibió la totalidad del pedido",
-    width: 1,
     default: () => "'0'",
   })
   flagMoneyTakenDriver: boolean | null;
@@ -431,7 +425,7 @@ export class SalOrders {
   })
   pickingHistoryId: number | null;
 
-  @Column("tinyint", { name: "flag_active", width: 1, default: () => "'1'" })
+  @Column("tinyint", { name: "flag_active", default: () => "'1'" })
   flagActive: boolean;
 
   @Column("int", {

@@ -22,6 +22,9 @@ import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { proxyOpenaiController } from "./openai-proxy";
 import { starsoftController } from "./starsoft.controller";
+import { SalDocuments } from "./csm-sale/csm-sale.entity";
+import { getAbstractData } from "./abstaract-sales.service";
+import { SalCashDeskClosing } from "./SalCashDeskClosing";
 
 process.env.TZ = "UTC";
 const app = new Hono();
@@ -741,6 +744,130 @@ app.get("warehouses", async (c) => {
 
   return c.json(allWarehouses);
 });
+
+
+
+interface AbstractDateData {
+  date: string;
+  sales: {
+    totalCount: number,
+    totalAmount: number,
+    terminals: {
+      [x: string]: {
+        totalCount: number,
+        totalAmount: number,
+        id: number,
+        warehouseId: number,
+        subsidiaryId: number,
+        companyId: number,
+      }
+    }
+
+  },
+  purchases: {
+    totalCount: number,
+    totalAmount: number,
+    terminals: {
+      [x: string]: {
+        totalCount: number,
+        totalAmount: number,
+        id: number,
+        warehouseId: number,
+        subsidiaryId: number,
+        companyId: number,
+      }
+    }
+
+  }
+}
+
+app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+
+  const subsidiariesRepo = datasource.sales.getRepository(ComSubsidiaries);
+  const subsidiaries = await subsidiariesRepo.find({
+    where: {
+      companyId: csmCompany?.id,
+    }
+  });
+
+  const warehousesRepo = datasource.products.getRepository(WarWarehouses);
+  const warehouses = await warehousesRepo.findBy({
+    companyId: csmCompany?.id,
+  });
+
+  const terminalsRepo = datasource.sales.getRepository(SalTerminal);
+  const terminals = await terminalsRepo.find({ where: { companyId: csmCompany.id } })
+
+  const cashClosingsRepo = datasource.sales.getRepository(SalCashDeskClosing);
+
+  const csmProductsRepo = datasource.products.getRepository(WarProduct);
+  const skusCount = await csmProductsRepo.countBy({
+    companyId: csmCompany?.id,
+  });
+
+  const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
+  const abstractSaleRepo = datasource.sales.getRepository(SalDocuments);
+  const csmOrdersRepo = datasource.sales.getRepository(SalOrders);
+
+
+  const abstractData = await getAbstractData(
+    abstractSaleRepo,
+    terminalsRepo,
+    csmPurchasesRepo,
+    csmCompany,
+    csmOrdersRepo,
+    cashClosingsRepo
+  );
+
+
+  return c.json({ terminals, warehouses, subsidiaries, abstractData, skusCount });
+});
+
 
 app.route("c3-proxy", proxyC3Controller);
 app.route("openai-proxy", proxyOpenaiController);

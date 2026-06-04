@@ -5,6 +5,7 @@
     "jsxImportSource": "hono/jsx",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "types": ["node"]
   }
 }

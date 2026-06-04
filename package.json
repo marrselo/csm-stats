@@ -4,15 +4,16 @@
     "dev": "bun run --hot src/index.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.873.0",
-    "hono": "^4.9.2",
-    "mysql2": "^3.14.3",
-    "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.26"
+    "@aws-sdk/client-secrets-manager": "3.1057.0",
+    "hono": "4.12.23",
+    "mysql2": "3.22.4",
+    "reflect-metadata": "0.2.2",
+    "typeorm": "1.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "oxfmt": "^0.13.0",
-    "oxlint": "^1.28.0"
+    "@types/node": "25.9.1",
+    "oxfmt": "0.52.0",
+    "oxlint": "1.67.0"
   }
 }

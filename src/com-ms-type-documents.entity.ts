@@ -45,7 +45,7 @@ export class ComMsTypeDocuments {
   @Column("json", { name: "settings", nullable: true })
   settings: object | null;
 
-  @Column("tinyint", { name: "include_in_list", nullable: true, width: 1 })
+  @Column("tinyint", { name: "include_in_list", nullable: true })
   includeInList: boolean | null;
 
   @Column("int", { name: "flag_fee", nullable: true, default: () => "'1'" })
@@ -55,7 +55,6 @@ export class ComMsTypeDocuments {
     name: "flag_convert_document",
     nullable: true,
     comment: "Permitir convertir documentos",
-    width: 1,
   })
   flagConvertDocument: boolean | null;
 
@@ -63,11 +62,10 @@ export class ComMsTypeDocuments {
     name: "flag_display_transfer",
     nullable: true,
     comment: "Permitir movimineto de transacciones cash/bank",
-    width: 1,
   })
   flagDisplayTransfer: boolean | null;
 
-  @Column("tinyint", { name: "flag_active", width: 1, default: () => "'1'" })
+  @Column("tinyint", { name: "flag_active", default: () => "'1'" })
   flagActive: boolean;
 
   @Column("timestamp", { name: "deleted_at", nullable: true })
@@ -88,7 +86,6 @@ export class ComMsTypeDocuments {
   @Column("tinyint", {
     name: "flag_include_notes",
     nullable: true,
-    width: 1,
     default: () => "'0'",
   })
   flagIncludeNotes: boolean | null;

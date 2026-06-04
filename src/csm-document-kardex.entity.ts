@@ -64,7 +64,7 @@ export class WarDocumentKardex {
   @Column("int", { name: "company_id", nullable: true })
   companyId: number | null;
 
-  @Column("tinyint", { name: "flag_active", width: 1, default: () => "'1'" })
+  @Column("tinyint", { name: "flag_active", default: () => "'1'" })
   flagActive: boolean;
 
   @Column("timestamp", { name: "deleted_at", nullable: true })
