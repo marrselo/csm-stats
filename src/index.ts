@@ -856,7 +856,7 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
 
 
   const abstractData = await getAbstractData(
-    csmCompany,aclCompany,
+    csmCompany, aclCompany,
     abstractSaleRepo,
     terminalsRepo,
     csmPurchasesRepo,
@@ -865,7 +865,70 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
   );
 
 
-  return c.json({ terminals, warehouses, subsidiaries, abstractData, skusCount });
+
+
+  if (c.req.query('format') === 'csv') {
+    const finalData = [
+      ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count', 'purchases_amount', 'purchases_count', 'cash_closings_amount', 'cash_closings_count', 'orders_amount', 'orders_count']
+    ]
+    for (const date in abstractData) {
+      const dateData = abstractData[date]
+
+      const dd: any = { date, terminals: [] }
+      for (const terminal of terminals) {
+        const d = {
+          warehouseId: terminal.warWarehousesId,
+          warehouseName: `"${terminal.warWarehousesName?.replaceAll('\n', ' ').replaceAll('"', '').replaceAll(',', ' ')}"`,
+          terminalId: terminal.id,
+          terminalName: `"${terminal.name?.replaceAll('\n', ' ').replaceAll('"', '').replaceAll(',', ' ')}"`,
+          date: `"${date}"`,
+          salesAmount: dateData.sales.terminals[terminal.id]?.totalAmount ?? 0,
+          salesCount: dateData.sales.terminals[terminal.id]?.totalCount ?? 0,
+          purchasesAmount: dateData.purchases.terminals[terminal.id]?.totalAmount ?? 0,
+          purchasesCount: dateData.purchases.terminals[terminal.id]?.totalCount ?? 0,
+          cashClosingsAmount: dateData.cashClosings.terminals[terminal.id]?.totalAmount ?? 0,
+          cashClosingsCount: dateData.cashClosings.terminals[terminal.id]?.totalCount ?? 0,
+          ordersAmount: dateData.orders.terminals[terminal.id]?.totalAmount ?? 0,
+          ordersCount: dateData.orders.terminals[terminal.id]?.totalCount ?? 0,
+        }
+
+
+        finalData.push(Object.values(d))
+      }
+
+
+    }
+
+    return finalData.map(l => l.join(',')).join('\n')
+  }
+
+
+  const finalData = []
+  for (const date in abstractData) {
+    const dateData = abstractData[date]
+
+    const dd = { date, terminals: [] }
+    for (const terminal of terminals) {
+      const d = {
+        warehouseId: terminal.warWarehousesId,
+        terminalId: terminal.id,
+        salesAmount: dateData.sales.terminals[terminal.id]?.totalAmount ?? 0,
+        salesCount: dateData.sales.terminals[terminal.id]?.totalCount ?? 0,
+        purchasesAmount: dateData.purchases.terminals[terminal.id]?.totalAmount ?? 0,
+        purchasesCount: dateData.purchases.terminals[terminal.id]?.totalCount ?? 0,
+        cashClosingsAmount: dateData.cashClosings.terminals[terminal.id]?.totalAmount ?? 0,
+        cashClosingsCount: dateData.cashClosings.terminals[terminal.id]?.totalCount ?? 0,
+        ordersAmount: dateData.orders.terminals[terminal.id]?.totalAmount ?? 0,
+        ordersCount: dateData.orders.terminals[terminal.id]?.totalCount ?? 0,
+      }
+
+      dd.terminals.push(d)
+    }
+    finalData.push(dd)
+
+
+    return c.json({ terminals, warehouses, subsidiaries, finalData, skusCount });
+  }
 });
 
 
