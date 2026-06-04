@@ -50,7 +50,7 @@ async function getSkusByDates(start: Date, end: Date, warehousesUids: string[]) 
 
         const [rows] = await job.getQueryResults()
 
-        return rows as { date: string, productsCount: number, amount: number }[]
+        return rows as { date:{value:string}, productsCount: number, amount: number }[]
     } catch (error) {
         console.error(error)
         throw error
@@ -695,14 +695,14 @@ export async function getAbstractSkus(
     const dates = getDatesBetween(init, today);
     const skus = await getSkusByDates(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86700000), warehousesUids)
 
-
+console.log('SKUS',skus.length,skus.slice(0,10))
     const abstractData: Record<
         string,
         {
             date: string,
             totalAmount: number, totalCount: number
         }
-    > = Object.fromEntries(skus.map(s => [s.date, { date: s.date, totalAmount: s.amount, totalCount: s.productsCount }]));
+    > = Object.fromEntries(skus.map(s => [s.date.value, { date: s.date.value, totalAmount: s.amount, totalCount: s.productsCount }]));
 
     return Object.values(abstractData)
 
