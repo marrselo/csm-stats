@@ -929,6 +929,13 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
 
 });
 
+import { htmlDashboard } from "./dashboard";
+
+app.get('/dashboard', (c) => {
+  return c.html(htmlDashboard)
+})
+
+
 
 app.route("c3-proxy", proxyC3Controller);
 app.route("openai-proxy", proxyOpenaiController);
