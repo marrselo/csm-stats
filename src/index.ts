@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { aclDataSource, getDatasource } from "./datasources";
+import { aclDataSource, expenseDataSource, getDatasource } from "./datasources";
 import { AclCompany } from "./acl-company/acl-company.entity";
 import { ComCompanies } from "./csm-company/csm-company.entity";
 import { ComEmployee } from "./csm-employee/csm-employee.entity";
@@ -23,7 +23,7 @@ import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { proxyOpenaiController } from "./openai-proxy";
 import { starsoftController } from "./starsoft.controller";
 import { SalDocuments } from "./csm-sale/csm-sale.entity";
-import { getAbstractData } from "./abstaract-sales.service";
+import { getAbstractCashClosings, getAbstractData, getAbstractExpense, getAbstractPurchases, getAbstractSales, getAbstractSkus } from "./abstaract-sales.service";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
 
 process.env.TZ = "UTC";
@@ -925,11 +925,625 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
 
 
   }
-  return c.json({ terminals, warehouses, subsidiaries, abstractData:finalData, skusCount });
+  return c.json({ terminals, warehouses, subsidiaries, abstractData: finalData, skusCount });
+
+});
+
+
+
+app.get("abstract/dates/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+
+  const subsidiariesRepo = datasource.sales.getRepository(ComSubsidiaries);
+  const subsidiaries = await subsidiariesRepo.find({
+    where: {
+      companyId: csmCompany?.id,
+    }
+  });
+
+  const warehousesRepo = datasource.products.getRepository(WarWarehouses);
+  const warehouses = await warehousesRepo.findBy({
+    companyId: csmCompany?.id,
+  });
+
+  const terminalsRepo = datasource.sales.getRepository(SalTerminal);
+  const terminals = await terminalsRepo.find({ where: { companyId: csmCompany.id } })
+
+  const cashClosingsRepo = datasource.sales.getRepository(SalCashDeskClosing);
+  const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
+  const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
+  const expensesRepo = expenseDataSource.getRepository(ExpenseEntity);
+
+
+  const abstractSales = await getAbstractSales(
+    aclCompany,
+    abstractSaleRepo,
+  );
+  const abstractPurchases = await getAbstractPurchases(
+    csmCompany,
+    csmPurchasesRepo,
+  );
+  const abstractCashClosings = await getAbstractCashClosings(
+    csmCompany,
+    cashClosingsRepo,
+  );
+
+  const abstractExpenses = await getAbstractExpense(
+    aclCompany,
+    expensesRepo,
+  );
+
+
+  const abstractSkus = await getAbstractSkus(
+    warehouses.map(w => `${aclCompany.id}-${w.id}`)
+  );
+
+
+
+  if (c.req.query('format') === 'csv') {
+    const salesArrayCsv = [
+      ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count']
+    ]
+    for (const abstract of abstractSales) {
+
+      for (const terminal of terminals) {
+        const d = {
+          warehouseId: terminal.warWarehousesId,
+          warehouseName: `"${terminal.warWarehousesName?.replaceAll('\n', ' ').replaceAll('"', '').replaceAll(',', ' ')}"`,
+          terminalId: terminal.id,
+          terminalName: `"${terminal.name?.replaceAll('\n', ' ').replaceAll('"', '').replaceAll(',', ' ')}"`,
+          date: `"${abstract.date}"`,
+          salesAmount: abstract.terminals[terminal.id]?.totalAmount ?? 0,
+          salesCount: abstract.terminals[terminal.id]?.totalCount ?? 0,
+        }
+        salesArrayCsv.push(Object.values(d))
+      }
+    }
+    const salesCsv = (salesArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+    const purchasesArrayCsv = [
+      ['date', 'purchases_amount', 'purchases_count']
+    ]
+    for (const abstract of abstractPurchases) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        purchasesAmount: abstract?.totalAmount ?? 0,
+        purchasesCount: abstract?.totalCount ?? 0,
+      }
+      purchasesArrayCsv.push(Object.values(d))
+    }
+    const purchasesCsv = (purchasesArrayCsv.map(l => l.join(',')).join('\n'))
+
+    const cashClosingsArrayCsv = [
+      ['date', 'cash_closings_amount', 'cash_closings_count']
+    ]
+    for (const abstract of abstractCashClosings) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        cashClosingsAmount: abstract?.totalAmount ?? 0,
+        cashClosingsCount: abstract?.totalCount ?? 0,
+      }
+      cashClosingsArrayCsv.push(Object.values(d))
+    }
+    const cashClosingsCsv = (cashClosingsArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+
+    const expensesArrayCsv = [
+      ['date', 'expenses_amount', 'expenses_count']
+    ]
+    for (const abstract of abstractExpenses) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        expensesAmount: abstract?.totalAmount ?? 0,
+        expensesCount: abstract?.totalCount ?? 0,
+      }
+      expensesArrayCsv.push(Object.values(d))
+    }
+    const expensesCsv = (expensesArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+    const skusArrayCsv = [
+      ['date', 'skus_amount', 'skus_count']
+    ]
+    for (const abstract of abstractSkus) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        skusAmount: abstract?.totalAmount ?? 0,
+        skusCount: abstract?.totalCount ?? 0,
+      }
+      skusArrayCsv.push(Object.values(d))
+    }
+    const skusCsv = (skusArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+    return c.text([salesCsv, purchasesCsv, cashClosingsCsv, expensesCsv, skusCsv].join('\n------\n'))
+  }
+  return c.json({ terminals, warehouses, subsidiaries, abstractSales, abstractPurchases, abstractCashClosings, abstractExpenses, abstractSkus });
+
+});
+
+
+
+
+
+
+
+
+
+app.get("abstract/sales/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+
+  const subsidiariesRepo = datasource.sales.getRepository(ComSubsidiaries);
+  const subsidiaries = await subsidiariesRepo.find({
+    where: {
+      companyId: csmCompany?.id,
+    }
+  });
+
+  const warehousesRepo = datasource.products.getRepository(WarWarehouses);
+  const warehouses = await warehousesRepo.findBy({
+    companyId: csmCompany?.id,
+  });
+
+  const terminalsRepo = datasource.sales.getRepository(SalTerminal);
+  const terminals = await terminalsRepo.find({ where: { companyId: csmCompany.id } })
+
+  const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
+
+
+  const abstractSales = await getAbstractSales(
+    aclCompany,
+    abstractSaleRepo,
+  );
+
+
+  if (c.req.query('format') === 'csv') {
+    const salesArrayCsv = [
+      ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count']
+    ]
+    for (const abstract of abstractSales) {
+
+      for (const terminal of terminals) {
+        const d = {
+          warehouseId: terminal.warWarehousesId,
+          warehouseName: `"${terminal.warWarehousesName?.replaceAll('\n', ' ').replaceAll('"', '').replaceAll(',', ' ')}"`,
+          terminalId: terminal.id,
+          terminalName: `"${terminal.name?.replaceAll('\n', ' ').replaceAll('"', '').replaceAll(',', ' ')}"`,
+          date: `"${abstract.date}"`,
+          salesAmount: abstract.terminals[terminal.id]?.totalAmount ?? 0,
+          salesCount: abstract.terminals[terminal.id]?.totalCount ?? 0,
+        }
+        salesArrayCsv.push(Object.values(d))
+      }
+    }
+    const salesCsv = (salesArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+
+    return c.text(salesCsv)
+  }
+  return c.json({ terminals, warehouses, subsidiaries, abstractSales });
+
+});
+
+app.get("abstract/purchases/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+
+
+  const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
+
+
+
+  const abstractPurchases = await getAbstractPurchases(
+    csmCompany,
+    csmPurchasesRepo,
+  );
+  if (c.req.query('format') === 'csv') {
+
+    const purchasesArrayCsv = [
+      ['date', 'purchases_amount', 'purchases_count']
+    ]
+    for (const abstract of abstractPurchases) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        purchasesAmount: abstract?.totalAmount ?? 0,
+        purchasesCount: abstract?.totalCount ?? 0,
+      }
+      purchasesArrayCsv.push(Object.values(d))
+    }
+    const purchasesCsv = (purchasesArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+    return c.text(purchasesCsv)
+  }
+  return c.json(abstractPurchases);
+
+});
+
+
+app.get("abstract/cash-closings/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+
+
+  const cashClosingsRepo = datasource.sales.getRepository(SalCashDeskClosing);
+
+
+  const abstractCashClosings = await getAbstractCashClosings(
+    csmCompany,
+    cashClosingsRepo,
+  );
+
+
+
+
+  if (c.req.query('format') === 'csv') {
+
+    const cashClosingsArrayCsv = [
+      ['date', 'cash_closings_amount', 'cash_closings_count']
+    ]
+    for (const abstract of abstractCashClosings) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        cashClosingsAmount: abstract?.totalAmount ?? 0,
+        cashClosingsCount: abstract?.totalCount ?? 0,
+      }
+      cashClosingsArrayCsv.push(Object.values(d))
+    }
+    const cashClosingsCsv = (cashClosingsArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+    return c.text(cashClosingsCsv)
+  }
+  return c.json(abstractCashClosings);
+
+});
+
+app.get("abstract/expenses/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+  const expensesRepo = expenseDataSource.getRepository(ExpenseEntity);
+
+
+  const abstractExpenses = await getAbstractExpense(
+    aclCompany,
+    expensesRepo,
+  );
+
+
+
+  if (c.req.query('format') === 'csv') {
+
+
+
+    const expensesArrayCsv = [
+      ['date', 'expenses_amount', 'expenses_count']
+    ]
+    for (const abstract of abstractExpenses) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        expensesAmount: abstract?.totalAmount ?? 0,
+        expensesCount: abstract?.totalCount ?? 0,
+      }
+      expensesArrayCsv.push(Object.values(d))
+    }
+    const expensesCsv = (expensesArrayCsv.map(l => l.join(',')).join('\n'))
+
+    return c.text(expensesCsv)
+  }
+  return c.json(abstractExpenses);
+
+});
+
+app.get("abstract/skus/acl-code/:aclCode", async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+
+  const aclTemplate = await aclTemplateRepo.findOneBy({
+    id: aclCompany?.templateId,
+  });
+
+  if (!aclTemplate) {
+    return c.json(
+      { error: `ACL Template  ${aclCompany.templateId} not found` },
+      400,
+    );
+  }
+
+  // console.log('ACL TEMPLATE SETTINGS',aclTemplate?.settings)
+  const csmNode: string = aclTemplate?.settings.domains
+    .find((d: any) => d.code === "PRODUCTS_URL")
+    .endPoint.replace("https://", "")
+    .split(".")[0];
+
+  if (!csmNode) {
+    console.log("CSM NODE not found", aclTemplate?.settings);
+    return c.json({ error: `Node not found` }, 400);
+  }
+
+  const datasource = getDatasource(csmNode);
+
+  if (!datasource) {
+    console.log("Datasource not found", aclTemplate?.settings);
+    return c.json({ error: `DataSource ${csmNode} not found` }, 400);
+  }
+
+  const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+  const csmCompany = await csmCompanyRepo.findOneBy({ aclId: aclCompany?.id });
+
+  if (!csmCompany) {
+    return c.json({ error: `Company not found in node ${csmNode} ` }, 404);
+  };
+
+  const warehousesRepo = datasource.products.getRepository(WarWarehouses);
+  const warehouses = await warehousesRepo.findBy({
+    companyId: csmCompany?.id,
+  });
+
+
+  const abstractSkus = await getAbstractSkus(
+    warehouses.map(w => `${aclCompany.id}-${w.id}`)
+  );
+
+  if (c.req.query('format') === 'csv') {
+
+    const skusArrayCsv = [
+      ['date', 'skus_amount', 'skus_count']
+    ]
+    for (const abstract of abstractSkus) {
+
+      const d = {
+        date: `"${abstract.date}"`,
+        skusAmount: abstract?.totalAmount ?? 0,
+        skusCount: abstract?.totalCount ?? 0,
+      }
+      skusArrayCsv.push(Object.values(d))
+    }
+    const skusCsv = (skusArrayCsv.map(l => l.join(',')).join('\n'))
+
+
+    return c.text(skusCsv)
+  }
+  return c.json(abstractSkus);
 
 });
 
 import { htmlDashboard } from "./dashboard";
+import { ExpenseEntity } from "./expense.entity";
 
 app.get('/dashboard', (c) => {
   return c.html(htmlDashboard)

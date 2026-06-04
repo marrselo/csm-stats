@@ -3,10 +3,59 @@ import { Between, IsNull, Repository } from "typeorm";
 import { PurDocuments } from "./csm-purchase/csm-purchase.entity";
 import { SalTerminal } from "./csm-terminal/csm-terminal.entity";
 import { SalOrders } from "./csm-order.entity";
-import { SalDocuments } from "./csm-sale/csm-sale.entity";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
 import { AbstractSale } from "./abstract-sale/sale-abstract.entity";
 import { AclCompany } from "./acl-company/acl-company.entity";
+import { ExpenseEntity } from "./expense.entity";
+import { GoogleAuth } from 'google-auth-library'
+import { BigQuery } from '@google-cloud/bigquery'
+import fs from 'fs'
+
+// ⚠️ tú controlas qué archivo cargas (esto evita el riesgo)
+const credentials = JSON.parse(
+    process.env.BQ_CM_CREDENTIALS ?? '{}'
+)
+
+const auth = new GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+})
+
+const bigquery = new BigQuery({
+    projectId: credentials.project_id,
+    authClient: await auth.getClient(),
+})
+
+async function getSkusByDates(start: Date, end: Date, warehousesUids: string[]) {
+    try {
+        const query = `
+    SELECT
+      DATE(created_at) AS date,
+      COUNT(DISTINCT(product_code)) AS productsCount,
+      SUM(quantity) AS quantity_date,
+      SUM(sale_price) AS amount
+    FROM \`casamerketapp.test2.sale_detail\`
+    WHERE
+      created_at >= TIMESTAMP(@start)
+      AND created_at < TIMESTAMP(@end)
+      AND warehouse_uid IN UNNEST(@warehouses)
+    GROUP BY date
+    ORDER BY date
+  `
+
+        const [job] = await bigquery.createQueryJob({
+            query,
+            params: { start: start.toISOString().split('T').shift(), end: end.toISOString().split('T').shift(), warehouses: warehousesUids },
+        })
+
+        const [rows] = await job.getQueryResults()
+
+        return rows as { date: string, productsCount: number, amount: number }[]
+    } catch (error) {
+        console.error(error)
+        throw error
+    }
+}
 
 interface AbstractDateData {
     date: string;
@@ -234,7 +283,7 @@ export async function getAbstractData(
         },
     });
 
-    console.log('PUR',purchases.length,purchases.slice(0,4))
+    console.log('PUR', purchases.length, purchases.slice(0, 4))
 
     purchases.forEach((pur: PurDocuments) => {
         if (pur.deletedAt) return
@@ -365,9 +414,296 @@ export async function getAbstractData(
 
     // }
 
-
-
     return abstractData
 
+}
+
+
+export async function getAbstractSales(
+    aclCompany: AclCompany,
+    salDocsRepo: Repository<AbstractSale>,
+) {
+    const today = new Date();
+    const init = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+
+    const dates = getDatesBetween(init, today);
+
+
+    const abstractData: Record<
+        string,
+        {
+            totalCount: number,
+            totalAmount: number,
+            date: string,
+            terminals: {
+                [x: string]: {
+                    totalCount: number,
+                    totalAmount: number,
+                    terminalId: number,
+                }
+            }
+        }
+    > = {};
+
+
+    // for (const terminal of terminals) {
+
+    const sales = await salDocsRepo.find({
+        where: {
+            aclId: aclCompany.id,
+            createdAt: Between(dates[0].getTime(), (dates.at(-1) as Date)?.getTime() + 86400000)
+        },
+        select: {
+            amount: true,
+            terminalId: true,
+            createdAt: true,
+        },
+    });
+
+
+    sales.forEach((sal: AbstractSale) => {
+        const terminalId = sal.terminalId
+        if (!terminalId) return;
+
+        const saleDate = new Date(Number(sal.createdAt))
+        if (Number.isNaN(saleDate.getTime())) return;
+        const dateString = saleDate.toISOString().split('T').shift() as string;
+
+        const dateData = abstractData[dateString];
+
+        const amount = Number(sal.amount)
+        if (Number.isNaN(amount) || sal.amount === null) return
+        if (!dateData) {
+            abstractData[dateString] = {
+                date: dateString,
+                totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } }
+
+            }
+        }
+        if (!abstractData[dateString].terminals[terminalId]) {
+            abstractData[dateString].terminals[terminalId] = { terminalId, totalAmount: 0, totalCount: 0 }
+        }
+
+        abstractData[dateString].totalAmount += amount
+        abstractData[dateString].totalCount += 1
+        abstractData[dateString].terminals[terminalId].totalAmount += amount
+        abstractData[dateString].terminals[terminalId].totalCount += 1
+    });
+
+    return Object.values(abstractData)
+
+
+}
+
+export async function getAbstractPurchases(
+    csmCompany: ComCompanies,
+    csmPurchasesRepo: Repository<PurDocuments>,
+) {
+    const today = new Date();
+    const init = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+
+    const dates = getDatesBetween(init, today);
+
+
+    const abstractData: Record<
+        string,
+        {
+            date: string,
+            totalAmount: number, totalCount: number
+        }
+    > = {};
+
+    const purchases = await csmPurchasesRepo.find({
+        where: {
+            companyId: csmCompany.id,
+            deletedAt: IsNull(),
+            creationDateNumber: Between(dates[0].getTime(), (dates.at(-1) as Date)?.getTime() + 86400000),
+        },
+        select: {
+            amount: true,
+            documentDateNumber: true,
+            terminalId: true,
+            deletedAt: true,
+        },
+    });
+
+    console.log('PUR', purchases.length, purchases.slice(0, 4))
+
+    purchases.forEach((pur: PurDocuments) => {
+        if (pur.deletedAt) return
+        const terminalId = pur.terminalId
+        if (!terminalId) return;
+
+        if (!pur.documentDateNumber) return;
+        const saleDate = new Date(Number(pur.documentDateNumber))
+        if (Number.isNaN(saleDate.getTime())) return;
+        const dateString = saleDate.toISOString().split('T').shift() as string;
+
+        const dateData = abstractData[dateString];
+
+        const amount = Number(pur.amount)
+        if (Number.isNaN(amount) || pur.amount === null) return
+        if (!dateData) {
+            abstractData[dateString] = {
+                date: dateString,
+                totalAmount: 0, totalCount: 0
+            }
+        }
+
+        abstractData[dateString].totalAmount += amount
+        abstractData[dateString].totalCount += 1
+    });
+    return Object.values(abstractData)
+
+
+}
+
+export async function getAbstractCashClosings(
+    csmCompany: ComCompanies,
+    cashClosingsRepo: Repository<SalCashDeskClosing>,
+) {
+    const today = new Date();
+    const init = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+
+    const dates = getDatesBetween(init, today);
+
+
+    const abstractData: Record<
+        string,
+        {
+            date: string,
+            totalAmount: number, totalCount: number
+        }
+    > = {};
+
+
+
+    const cashClosings = await cashClosingsRepo.find({
+        where: {
+            companyId: csmCompany.id,
+            deletedAt: IsNull(),
+            createdAt: Between(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86400000))
+        },
+        select: {
+            endAmount: true,
+            terminalId: true,
+            closedAt: true,
+            deletedAt: true,
+        },
+    });
+
+    cashClosings.forEach((cashClosing: SalCashDeskClosing) => {
+        if (cashClosing.deletedAt) return
+        const terminalId = cashClosing.terminalId
+        if (!terminalId) return;
+
+        if (!cashClosing.closedAt) return;
+        const date = cashClosing.closedAt
+        if (Number.isNaN(date.getTime())) return;
+        const dateString = date.toISOString().split('T').shift() as string;
+
+        const dateData = abstractData[dateString];
+
+        const amount = Number(cashClosing.endAmount)
+        if (Number.isNaN(amount) || cashClosing.endAmount === null) return
+        if (!dateData) {
+            abstractData[dateString] = {
+                date: dateString,
+                totalAmount: 0, totalCount: 0
+            }
+        }
+
+
+        abstractData[dateString].totalAmount += amount
+        abstractData[dateString].totalCount += 1
+    });
+
+
+
+    return Object.values(abstractData)
+
+}
+
+
+export async function getAbstractExpense(
+    aclCompany: AclCompany,
+    expensesRepo: Repository<ExpenseEntity>,
+) {
+    const today = new Date();
+    const init = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+
+    const dates = getDatesBetween(init, today);
+
+
+    const abstractData: Record<
+        string,
+        {
+            date: string,
+            totalAmount: number, totalCount: number
+        }
+    > = {};
+
+
+    const expenses = await expensesRepo.find({
+        where: {
+            aclId: aclCompany.id,
+            deletedAt: IsNull(),
+            expiredAt: Between(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86400000))
+        },
+        select: {
+            mount: true,
+            expiredAt: true,
+            deletedAt: true,
+        },
+    });
+
+    expenses.forEach((expense: ExpenseEntity) => {
+        if (expense.deletedAt) return
+
+        if (!expense.expiredAt) return;
+        const date = expense.expiredAt
+        if (Number.isNaN(date.getTime())) return;
+        const dateString = date.toISOString().split('T').shift() as string;
+
+        const dateData = abstractData[dateString];
+
+        const amount = Number(expense.mount)
+        if (Number.isNaN(amount) || expense.mount === null) return
+        if (!dateData) {
+            abstractData[dateString] = {
+                date: dateString,
+                totalAmount: 0, totalCount: 0
+            }
+
+        }
+
+        abstractData[dateString].totalAmount += amount
+        abstractData[dateString].totalCount += 1
+    });
+
+    return Object.values(abstractData)
+}
+
+
+
+export async function getAbstractSkus(
+    warehousesUids: string[],
+) {
+    const today = new Date();
+    const init = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+
+    const dates = getDatesBetween(init, today);
+    const skus = await getSkusByDates(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86700000), warehousesUids)
+
+
+    const abstractData: Record<
+        string,
+        {
+            date: string,
+            totalAmount: number, totalCount: number
+        }
+    > = Object.fromEntries(skus.map(s => [s.date, { date: s.date, totalAmount: s.amount, totalCount: s.productsCount }]));
+
+    return Object.values(abstractData)
 
 }

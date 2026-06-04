@@ -22,6 +22,7 @@ import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { ComMsTypeDocuments } from "./com-ms-type-documents.entity";
 import { DataSourceOptions } from "typeorm/browser";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
+import { ExpenseEntity } from "./expense.entity";
 
 const client = new SecretsManagerClient({
   region: "us-east-1",
@@ -90,6 +91,7 @@ const secretsNames: { products: string; sales: string; nodeName: string }[] = [
 const datasources: Record<string, { products: DataSource; sales: DataSource }> =
   {};
 export let aclDataSource: DataSource;
+export let expenseDataSource: DataSource;
 
 async function initDbs() {
   const secretValueAcl = await getSecret("secret-dbAcl");
@@ -105,6 +107,20 @@ async function initDbs() {
     logging: process.env.TYPEORM_LOGS === "true",
   };
   aclDataSource = await new DataSource(datasourceConfigAcl).initialize();
+
+  const secretValueExpense = await getSecret("secret-dbExpense");
+  const datasourceConfigExpense: DataSourceOptions = {
+    type: "mysql",
+    host: secretValueExpense.host,
+    port: Number(secretValueExpense.port),
+    username: secretValueExpense.username,
+    password: secretValueExpense.password,
+    database: secretValueExpense.dbname,
+    entities: [ExpenseEntity],
+    synchronize: false,
+    logging: process.env.TYPEORM_LOGS === "true",
+  };
+  expenseDataSource = await new DataSource(datasourceConfigExpense).initialize();
 
   for (const secrets of secretsNames) {
     try {
