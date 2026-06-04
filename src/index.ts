@@ -872,7 +872,6 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
     for (const date in abstractData) {
       const dateData = abstractData[date]
 
-      const dd: any = { date, terminals: [] }
       for (const terminal of terminals) {
         const d = {
           warehouseId: terminal.warWarehousesId,
@@ -925,8 +924,9 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
     finalData.push(dd)
 
 
-    return c.json({ terminals, warehouses, subsidiaries, finalData, skusCount });
   }
+  return c.json({ terminals, warehouses, subsidiaries, finalData, skusCount });
+
 });
 
 
