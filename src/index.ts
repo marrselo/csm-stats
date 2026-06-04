@@ -1105,6 +1105,15 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     }
     const skusCsv = (skusArrayCsv.map(l => l.join(',')).join('\n'))
 
+     // 1. Serialize JSON to string
+  // const jsonString = JSON.stringify(data, null, 2);
+  
+  // // 2. Set headers for download
+  // c.header('Content-Disposition', 'attachment; filename="data.json"');
+  // c.header('Content-Type', 'application/json');
+  
+  // // 3. Return body directly
+  // return c.body(jsonString);
 
     return c.text([salesCsv, purchasesCsv, cashClosingsCsv, expensesCsv, skusCsv].join('\n------\n'))
   }
@@ -1554,6 +1563,8 @@ app.get('/dashboard/:aclCode', async (c) => {
   if (!aclCompany) {
     return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
   }
+  console.log(aclCompany);
+  
   return c.html(htmlDashboard(aclCompany))
 })
 
