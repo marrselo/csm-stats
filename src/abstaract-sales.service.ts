@@ -203,12 +203,14 @@ export async function getAbstractData(
         if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
-                sales: { totalAmount: amount, totalCount: 1, terminals: { [terminalId]: { terminalId, totalAmount: amount, totalCount: 1 } } },
+                sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 purchases: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 cashClosings: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
-            return
+        }
+        if( !abstractData[dateString].sales.terminals[terminalId]){
+             abstractData[dateString].sales.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
         }
 
         abstractData[dateString].sales.totalAmount += amount
@@ -246,19 +248,18 @@ export async function getAbstractData(
 
         const amount = Number(pur.amount)
         if (Number.isNaN(amount) || pur.amount === null) return
-        if (!dateData) {
-
+       if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
-                purchases: { totalAmount: amount, totalCount: 1, terminals: { [terminalId]: { terminalId, totalAmount: amount, totalCount: 1 } } },
                 sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
+                purchases: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 cashClosings: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
-
-
             }
-            return
-        };
+        }
+        if( !abstractData[dateString].purchases.terminals[terminalId]){
+             abstractData[dateString].purchases.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        }
 
         abstractData[dateString].purchases.totalAmount += amount
         abstractData[dateString].purchases.totalCount += 1
@@ -295,19 +296,18 @@ export async function getAbstractData(
 
         const amount = Number(cashClosing.endAmount)
         if (Number.isNaN(amount) || cashClosing.endAmount === null) return
-        if (!dateData) {
-
+       if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
-
-                cashClosings: { totalAmount: amount, totalCount: 1, terminals: { [terminalId]: { terminalId, totalAmount: amount, totalCount: 1 } } },
                 sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 purchases: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
+                cashClosings: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
-
             }
-            return
-        };
+        }
+        if( !abstractData[dateString].cashClosings.terminals[terminalId]){
+             abstractData[dateString].cashClosings.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        }
 
         abstractData[dateString].cashClosings.totalAmount += amount
         abstractData[dateString].cashClosings.totalCount += 1
@@ -342,19 +342,18 @@ export async function getAbstractData(
 
         const amount = Number(order.total)
         if (Number.isNaN(amount) || order.total === null) return
-        if (!dateData) {
-
+       if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
-
-                orders: { totalAmount: amount, totalCount: 1, terminals: { [terminalId]: { terminalId, totalAmount: amount, totalCount: 1 } } },
                 sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 purchases: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
                 cashClosings: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
-
+                orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
-            return
-        };
+        }
+        if( !abstractData[dateString].orders.terminals[terminalId]){
+             abstractData[dateString].orders.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        }
 
         abstractData[dateString].orders.totalAmount += amount
         abstractData[dateString].orders.totalCount += 1
