@@ -122,7 +122,7 @@ export class PurDocuments {
   dateDocument?: Date;
 
   @Column({ name: "document_date_number", type: "bigint" })
-  documentDateNumber?: number;
+  documentDateNumber?: string;
 
   @Column({ name: "state_id", type: "int" })
   stateId?: number;

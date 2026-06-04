@@ -192,7 +192,7 @@ export async function getAbstractData(
         const terminalId = sal.terminalId
         if (!terminalId) return;
 
-        const saleDate = new Date(sal.createdAt)
+        const saleDate = new Date(Number(sal.createdAt))
         if (Number.isNaN(saleDate.getTime())) return;
         const dateString = saleDate.toISOString().split('T').shift() as string;
 
@@ -242,7 +242,7 @@ export async function getAbstractData(
         if (!terminalId) return;
 
         if (!pur.documentDateNumber) return;
-        const saleDate = new Date(pur.documentDateNumber)
+        const saleDate = new Date(Number(pur.documentDateNumber))
         if (Number.isNaN(saleDate.getTime())) return;
         const dateString = saleDate.toISOString().split('T').shift() as string;
 
@@ -336,7 +336,7 @@ export async function getAbstractData(
         if (!terminalId) return;
 
         if (!order.createdAtNumber) return;
-        const date = new Date(order.createdAtNumber)
+        const date = new Date(Number(order.createdAtNumber))
         if (Number.isNaN(date.getTime())) return;
         const dateString = date.toISOString().split('T').shift() as string;
 
