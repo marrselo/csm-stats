@@ -1545,8 +1545,16 @@ app.get("abstract/skus/acl-code/:aclCode", async (c) => {
 import { htmlDashboard } from "./dashboard";
 import { ExpenseEntity } from "./expense.entity";
 
-app.get('/dashboard', (c) => {
-  return c.html(htmlDashboard)
+app.get('/dashboard/:aclCode', async (c) => {
+  const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
+  const companyAclCode = c.req.param().aclCode;
+  const aclCompany = await aclCompanyRepo.findOneBy({
+    codeCompany: companyAclCode,
+  });
+  if (!aclCompany) {
+    return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
+  }
+  return c.html(htmlDashboard(companyAclCode))
 })
 
 
