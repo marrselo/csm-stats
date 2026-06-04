@@ -1554,7 +1554,7 @@ app.get('/dashboard/:aclCode', async (c) => {
   if (!aclCompany) {
     return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
   }
-  return c.html(htmlDashboard(companyAclCode))
+  return c.html(htmlDashboard(aclCompany))
 })
 
 
