@@ -5,6 +5,8 @@ import { SalTerminal } from "./csm-terminal/csm-terminal.entity";
 import { SalOrders } from "./csm-order.entity";
 import { SalDocuments } from "./csm-sale/csm-sale.entity";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
+import { AbstractSale } from "./abstract-sale/sale-abstract.entity";
+import { AclCompany } from "./acl-company/acl-company.entity";
 
 interface AbstractDateData {
     date: string;
@@ -151,10 +153,11 @@ function getDatesBetween(startDate: Date, endDate: Date) {
 }
 
 export async function getAbstractData(
-    salDocsRepo: Repository<SalDocuments>,
+    csmCompany: ComCompanies,
+aclCompany:AclCompany,
+    salDocsRepo: Repository<AbstractSale>,
     salTerminalsRepo: Repository<SalTerminal>,
     csmPurchasesRepo: Repository<PurDocuments>,
-    csmCompany: ComCompanies,
     csmOrdersRepo: Repository<SalOrders>,
     cashClosingsRepo: Repository<SalCashDeskClosing>,
 ) {
@@ -173,42 +176,40 @@ export async function getAbstractData(
     > = {};
 
 
-    for (const terminal of terminals) {
+    // for (const terminal of terminals) {
 
         const sales = await salDocsRepo.find({
             where: {
-                terminalId: terminal.id,
-                companyId: csmCompany?.id,
-                comSubsidiaryId: terminal.comSubsidiariesId
+                aclId: aclCompany.id,
             },
             select: {
                 id: true,
                 amount: true,
-                warehouseId: true,
-                salTypeDocumentId: true,
+                terminalId:true,
+                // salTypeDocumentId: true,
                 createdAt: true,
-                creationDateNumber: true,
-                deletedAt: true
+                // creationDateNumber: true,
+                // deletedAt: true
             },
         });
 
 
-        sales.forEach((sal: SalDocuments) => {
-            if (sal.deletedAt) return
+        sales.forEach((sal: AbstractSale) => {
+            // if (sal.deletedAt) return
             const terminalId = sal.terminalId
             if (!terminalId) return;
 
             const warehouseId = sal.warehouseId
             if (!warehouseId) return;
 
-            const subsidiaryId = sal.comSubsidiaryId
-            if (!subsidiaryId) return;
+            // const subsidiaryId = sal.comSubsidiaryId
+            // if (!subsidiaryId) return;
 
-            const companyId = sal.companyId
-            if (!companyId) return;
+            // const companyId = sal.companyId
+            // if (!companyId) return;
 
-            if (!sal.creationDateNumber) return;
-            const saleDate = new Date(sal.creationDateNumber)
+            // if (!sal.creationDateNumber) return;
+            const saleDate = new Date(sal.createdAt)
             if (Number.isNaN(saleDate.getTime())) return;
             const dateString = saleDate.toISOString().split('Z').shift() as string;
 
@@ -250,7 +251,6 @@ export async function getAbstractData(
         const purchases = await csmPurchasesRepo.find({
             where: {
                 companyId: csmCompany.id,
-                terminalId: terminal.id,
                 deletedAt: IsNull(),
             },
             select: {
@@ -311,7 +311,6 @@ export async function getAbstractData(
         const cashClosings = await cashClosingsRepo.find({
             where: {
                 companyId: csmCompany.id,
-                terminalId: terminal.id,
                 deletedAt: IsNull(),
             },
             select: {
@@ -363,7 +362,6 @@ export async function getAbstractData(
         const orders = await csmOrdersRepo.find({
             where: {
                 companyId: csmCompany?.id,
-                terminalId: terminal.id,
                 deletedAt: IsNull(),
             },
             select: {
@@ -381,10 +379,6 @@ export async function getAbstractData(
             if (order.deletedAt) return
             const terminalId = order.terminalId
             if (!terminalId) return;
-
-
-
-
 
             const companyId = order.companyId
             if (!companyId) return;
@@ -418,7 +412,7 @@ export async function getAbstractData(
             abstractData[dateString].orders.terminals[terminalId].totalCount += 1
         });
 
-    }
+    // }
 
     return abstractData
 

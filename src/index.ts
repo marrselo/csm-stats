@@ -851,15 +851,15 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
   });
 
   const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
-  const abstractSaleRepo = datasource.sales.getRepository(SalDocuments);
+  const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
   const csmOrdersRepo = datasource.sales.getRepository(SalOrders);
 
 
   const abstractData = await getAbstractData(
+    csmCompany,aclCompany,
     abstractSaleRepo,
     terminalsRepo,
     csmPurchasesRepo,
-    csmCompany,
     csmOrdersRepo,
     cashClosingsRepo
   );
