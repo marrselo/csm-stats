@@ -181,32 +181,17 @@ export async function getAbstractData(
             createdAt: Between(dates[0].getTime(), (dates.at(-1) as Date)?.getTime() + 86400000)
         },
         select: {
-            id: true,
             amount: true,
             terminalId: true,
-            // salTypeDocumentId: true,
             createdAt: true,
-            // creationDateNumber: true,
-            // deletedAt: true
         },
     });
 
 
     sales.forEach((sal: AbstractSale) => {
-        // if (sal.deletedAt) return
         const terminalId = sal.terminalId
         if (!terminalId) return;
 
-        const warehouseId = sal.warehouseId
-        if (!warehouseId) return;
-
-        // const subsidiaryId = sal.comSubsidiaryId
-        // if (!subsidiaryId) return;
-
-        // const companyId = sal.companyId
-        // if (!companyId) return;
-
-        // if (!sal.creationDateNumber) return;
         const saleDate = new Date(sal.createdAt)
         if (Number.isNaN(saleDate.getTime())) return;
         const dateString = saleDate.toISOString().split('Z').shift() as string;
@@ -224,25 +209,12 @@ export async function getAbstractData(
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
             return
-
         }
-
 
         abstractData[dateString].sales.totalAmount += amount
         abstractData[dateString].sales.totalCount += 1
         abstractData[dateString].sales.terminals[terminalId].totalAmount += amount
         abstractData[dateString].sales.terminals[terminalId].totalCount += 1
-
-        // warDateData.sales_amount += Number(sal.amount);
-        // warDateData.sales_count += 1;
-        // warDateData.sales_types_count.total += 1;
-        // if (docTypesMap[sal.type].code === "FAC") {
-        //     warDateData.sales_types_count.facturas += 1;
-        // } else if (docTypesMap[sal.type].code === "BOL") {
-        //     warDateData.sales_types_count.boletas += 1;
-        // } else {
-        //     warDateData.sales_types_count.otros += 1;
-        // }
     });
 
 
@@ -253,15 +225,10 @@ export async function getAbstractData(
             creationDateNumber: Between(dates[0].getTime(), (dates.at(-1) as Date)?.getTime() + 86400000),
         },
         select: {
-            id: true,
             amount: true,
-            warehouseId: true,
-            typeDocumentId: true,
             documentDateNumber: true,
             terminalId: true,
-            subsidiaryId: true,
             deletedAt: true,
-            creationDateNumber: true
         },
     });
 
@@ -270,17 +237,8 @@ export async function getAbstractData(
         const terminalId = pur.terminalId
         if (!terminalId) return;
 
-        const warehouseId = pur.warehouseId
-        if (!warehouseId) return;
-
-        const subsidiaryId = pur.subsidiaryId
-        if (!subsidiaryId) return;
-
-        const companyId = pur.companyId
-        if (!companyId) return;
-
-        if (!pur.creationDateNumber) return;
-        const saleDate = new Date(pur.creationDateNumber)
+        if (!pur.documentDateNumber) return;
+        const saleDate = new Date(pur.documentDateNumber)
         if (Number.isNaN(saleDate.getTime())) return;
         const dateString = saleDate.toISOString().split('Z').shift() as string;
 
@@ -307,6 +265,8 @@ export async function getAbstractData(
         abstractData[dateString].purchases.terminals[terminalId].totalAmount += amount
         abstractData[dateString].purchases.terminals[terminalId].totalCount += 1
     });
+
+
     const cashClosings = await cashClosingsRepo.find({
         where: {
             companyId: csmCompany.id,
@@ -314,7 +274,6 @@ export async function getAbstractData(
             createdAt: Between(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86400000))
         },
         select: {
-            id: true,
             endAmount: true,
             terminalId: true,
             closedAt: true,
@@ -326,9 +285,6 @@ export async function getAbstractData(
         if (cashClosing.deletedAt) return
         const terminalId = cashClosing.terminalId
         if (!terminalId) return;
-
-        const companyId = cashClosing.companyId
-        if (!companyId) return;
 
         if (!cashClosing.closedAt) return;
         const date = cashClosing.closedAt
@@ -366,13 +322,9 @@ export async function getAbstractData(
             createdAtNumber: Between(dates[0].getTime(), (dates.at(-1) as Date)?.getTime() + 86400000)
         },
         select: {
-            id: true,
-            typeDocumentId: true,
             createdAtNumber: true,
-            warehouseId: true,
             total: true,
             terminalId: true,
-            subsidiaryId: true,
             deletedAt: true
         },
     });
@@ -380,9 +332,6 @@ export async function getAbstractData(
         if (order.deletedAt) return
         const terminalId = order.terminalId
         if (!terminalId) return;
-
-        const companyId = order.companyId
-        if (!companyId) return;
 
         if (!order.createdAtNumber) return;
         const date = new Date(order.createdAtNumber)
