@@ -209,8 +209,8 @@ export async function getAbstractData(
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
         }
-        if( !abstractData[dateString].sales.terminals[terminalId]){
-             abstractData[dateString].sales.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        if (!abstractData[dateString].sales.terminals[terminalId]) {
+            abstractData[dateString].sales.terminals[terminalId] = { terminalId, totalAmount: 0, totalCount: 0 }
         }
 
         abstractData[dateString].sales.totalAmount += amount
@@ -234,6 +234,8 @@ export async function getAbstractData(
         },
     });
 
+    console.log('PUR',purchases.length,purchases.slice(0,4))
+
     purchases.forEach((pur: PurDocuments) => {
         if (pur.deletedAt) return
         const terminalId = pur.terminalId
@@ -248,7 +250,7 @@ export async function getAbstractData(
 
         const amount = Number(pur.amount)
         if (Number.isNaN(amount) || pur.amount === null) return
-       if (!dateData) {
+        if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
                 sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
@@ -257,8 +259,8 @@ export async function getAbstractData(
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
         }
-        if( !abstractData[dateString].purchases.terminals[terminalId]){
-             abstractData[dateString].purchases.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        if (!abstractData[dateString].purchases.terminals[terminalId]) {
+            abstractData[dateString].purchases.terminals[terminalId] = { terminalId, totalAmount: 0, totalCount: 0 }
         }
 
         abstractData[dateString].purchases.totalAmount += amount
@@ -296,7 +298,7 @@ export async function getAbstractData(
 
         const amount = Number(cashClosing.endAmount)
         if (Number.isNaN(amount) || cashClosing.endAmount === null) return
-       if (!dateData) {
+        if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
                 sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
@@ -305,8 +307,8 @@ export async function getAbstractData(
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
         }
-        if( !abstractData[dateString].cashClosings.terminals[terminalId]){
-             abstractData[dateString].cashClosings.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        if (!abstractData[dateString].cashClosings.terminals[terminalId]) {
+            abstractData[dateString].cashClosings.terminals[terminalId] = { terminalId, totalAmount: 0, totalCount: 0 }
         }
 
         abstractData[dateString].cashClosings.totalAmount += amount
@@ -342,7 +344,7 @@ export async function getAbstractData(
 
         const amount = Number(order.total)
         if (Number.isNaN(amount) || order.total === null) return
-       if (!dateData) {
+        if (!dateData) {
             abstractData[dateString] = {
                 date: dateString,
                 sales: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
@@ -351,8 +353,8 @@ export async function getAbstractData(
                 orders: { totalAmount: 0, totalCount: 0, terminals: { [terminalId]: { terminalId, totalAmount: 0, totalCount: 0 } } },
             }
         }
-        if( !abstractData[dateString].orders.terminals[terminalId]){
-             abstractData[dateString].orders.terminals[terminalId] =  { terminalId, totalAmount: 0, totalCount: 0 }
+        if (!abstractData[dateString].orders.terminals[terminalId]) {
+            abstractData[dateString].orders.terminals[terminalId] = { terminalId, totalAmount: 0, totalCount: 0 }
         }
 
         abstractData[dateString].orders.totalAmount += amount
@@ -364,7 +366,7 @@ export async function getAbstractData(
     // }
 
 
- 
+
     return abstractData
 
 
