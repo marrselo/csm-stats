@@ -722,7 +722,7 @@ export async function getAbstractSkusPurchases(
     const dates = getDatesBetween(init, today);
 
     const abstractData: {
-        date: string,
+        date: Date,
         totalCount: number
     }[] = await purchaseDetailsRepo // tu entidad
         .createQueryBuilder('detail')
@@ -736,6 +736,6 @@ export async function getAbstractSkusPurchases(
 
     console.log('SKUS PURCHASES', abstractData.length, abstractData.slice(0, 10))
 
-    return abstractData
+    return abstractData.map(i => ({ date: i.date.toISOString().split('T').shift(), totalCount: i.totalCount }))
 
 }

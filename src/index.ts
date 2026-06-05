@@ -1119,7 +1119,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     ]
     for (const abstract of abstractSkusPurchases) {
 
-      skusPurchasesArrayCsv.push([`"${abstract.date}"`,String(abstract?.totalCount ?? 0)])
+      skusPurchasesArrayCsv.push([`"${abstract.date}"`, String(abstract?.totalCount ?? 0)])
     }
     const skusPurchasesCsv = (skusPurchasesArrayCsv.map(l => l.join(',')).join('\n'))
 
@@ -1137,7 +1137,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
     const stream = new PassThrough()
 
-    const archive = new ZipArchive( {
+    const archive = new ZipArchive({
       zlib: { level: 9 },
     })
 
@@ -1163,7 +1163,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
     // 👇 Headers correctos para descarga
     c.header('Content-Type', 'application/zip')
-    c.header('Content-Disposition', 'attachment; filename="data.zip"')
+    c.header('Content-Disposition', `attachment; filename="${aclCompany.nombreComercial?.replaceAll('\n', ' ').trim().replaceAll(' ', '_') ?? aclCompany.codeCompany}.zip"`)
 
     // 👇 Devolver stream como response
     return new Response(stream as any)
