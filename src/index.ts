@@ -1098,7 +1098,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     const expensesCsv = (expensesArrayCsv.map(l => l.join(',')).join('\n'))
 
 
-    const skusArrayCsv = [
+    const skusSalesArrayCsv = [
       ['date', 'skus_amount', 'skus_count']
     ]
     for (const abstract of abstractSkusSales) {
@@ -1108,20 +1108,18 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
         skusAmount: abstract?.totalAmount ?? 0,
         skusCount: abstract?.totalCount ?? 0,
       }
-      skusArrayCsv.push(Object.values(d))
+      skusSalesArrayCsv.push(Object.values(d))
     }
-    const skusSalesCsv = (skusArrayCsv.map(l => l.join(',')).join('\n'))
+    const skusSalesCsv = (skusSalesArrayCsv.map(l => l.join(',')).join('\n'))
+
+
 
     const skusPurchasesArrayCsv = [
       ['date', 'skus_count']
     ]
     for (const abstract of abstractSkusPurchases) {
 
-      const d = {
-        date: `"${abstract.date}"`,
-        skusCount: abstract?.totalCount ?? 0,
-      }
-      skusArrayCsv.push(Object.values(d))
+      skusPurchasesArrayCsv.push([`"${abstract.date}"`,String(abstract?.totalCount ?? 0)])
     }
     const skusPurchasesCsv = (skusPurchasesArrayCsv.map(l => l.join(',')).join('\n'))
 

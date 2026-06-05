@@ -697,7 +697,7 @@ export async function getAbstractSkusSales(
     const dates = getDatesBetween(init, today);
     const skus = await getSkusByDates(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86700000), warehousesUids)
 
-    console.log('SKUS', skus.length, skus.slice(0, 10))
+    console.log('SKUS SALES', skus.length, skus.slice(0, 10))
     const abstractData: Record<
         string,
         {
@@ -734,6 +734,7 @@ export async function getAbstractSkusPurchases(
         .orderBy('date', 'DESC')
         .getRawMany();
 
+    console.log('SKUS PURCHASES', abstractData.length, abstractData.slice(0, 10))
 
     return abstractData
 
