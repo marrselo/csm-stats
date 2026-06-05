@@ -1068,12 +1068,13 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     const purchasesCsv = (purchasesArrayCsv.map(l => l.join(',')).join('\n'))
 
     const cashClosingsArrayCsv = [
-      ['date', 'cash_closings_amount', 'cash_closings_count']
+      ['date','terminal_id' ,'cash_closings_amount', 'cash_closings_count']
     ]
     for (const abstract of abstractCashClosings) {
 
       const d = {
         date: `"${abstract.date}"`,
+        terminalId:abstract.terminalId,
         cashClosingsAmount: abstract?.totalAmount ?? 0,
         cashClosingsCount: abstract?.totalCount ?? 0,
       }
