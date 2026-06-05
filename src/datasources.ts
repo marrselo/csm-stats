@@ -23,6 +23,7 @@ import { ComMsTypeDocuments } from "./com-ms-type-documents.entity";
 import { DataSourceOptions } from "typeorm/browser";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
 import { ExpenseEntity } from "./expense.entity";
+import { PurDocumentsDetails } from "./PurDocumentsDetails";
 
 const client = new SecretsManagerClient({
   region: "us-east-1",
@@ -144,7 +145,8 @@ async function initDbs() {
           CsmTypeDocument,
           SalOrders,
           ComMsTypeDocuments,
-          SalCashDeskClosing
+          SalCashDeskClosing,
+          PurDocumentsDetails
         ],
         synchronize: false,
         logging: process.env.TYPEORM_LOGS === "true",

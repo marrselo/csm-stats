@@ -10,6 +10,7 @@ import { ExpenseEntity } from "./expense.entity";
 import { GoogleAuth } from 'google-auth-library'
 import { BigQuery } from '@google-cloud/bigquery'
 import fs from 'fs'
+import { PurDocumentsDetails } from "./PurDocumentsDetails";
 
 // ⚠️ tú controlas qué archivo cargas (esto evita el riesgo)
 const credentials = JSON.parse(
@@ -50,7 +51,7 @@ async function getSkusByDates(start: Date, end: Date, warehousesUids: string[]) 
 
         const [rows] = await job.getQueryResults()
 
-        return rows as { date:{value:string}, productsCount: number, amount: number }[]
+        return rows as { date: { value: string }, productsCount: number, amount: number }[]
     } catch (error) {
         console.error(error)
         throw error
@@ -370,7 +371,7 @@ export async function getAbstractData(
         where: {
             companyId: csmCompany?.id,
             deletedAt: IsNull(),
-            createdAtNumber: Between(dates[0].getTime(), (dates.at(-1) as Date)?.getTime() + 86400000)
+            createdAtNumber: Between(String(dates[0].getTime()), String((dates.at(-1) as Date)?.getTime() + 86400000))
         },
         select: {
             createdAtNumber: true,
@@ -572,7 +573,8 @@ export async function getAbstractCashClosings(
         string,
         {
             date: string,
-            totalAmount: number, totalCount: number
+            totalAmount: number, totalCount: number,
+            terminalId: number,
         }
     > = {};
 
@@ -602,20 +604,20 @@ export async function getAbstractCashClosings(
         if (Number.isNaN(date.getTime())) return;
         const dateString = date.toISOString().split('T').shift() as string;
 
-        const dateData = abstractData[dateString];
+        const dateData = abstractData[`${dateString}_${terminalId}`];
 
         const amount = Number(cashClosing.endAmount)
         if (Number.isNaN(amount) || cashClosing.endAmount === null) return
         if (!dateData) {
-            abstractData[dateString] = {
+            abstractData[`${dateString}_${terminalId}`] = {
                 date: dateString,
-                totalAmount: 0, totalCount: 0
+                totalAmount: 0, totalCount: 0,
+                terminalId
             }
         }
 
-
-        abstractData[dateString].totalAmount += amount
-        abstractData[dateString].totalCount += 1
+        abstractData[`${dateString}_${terminalId}`].totalAmount += amount
+        abstractData[`${dateString}_${terminalId}`].totalCount += 1
     });
 
 
@@ -686,7 +688,7 @@ export async function getAbstractExpense(
 
 
 
-export async function getAbstractSkus(
+export async function getAbstractSkusSales(
     warehousesUids: string[],
 ) {
     const today = new Date();
@@ -695,7 +697,7 @@ export async function getAbstractSkus(
     const dates = getDatesBetween(init, today);
     const skus = await getSkusByDates(dates[0], new Date((dates.at(-1) as Date)?.getTime() + 86700000), warehousesUids)
 
-console.log('SKUS',skus.length,skus.slice(0,10))
+    console.log('SKUS', skus.length, skus.slice(0, 10))
     const abstractData: Record<
         string,
         {
@@ -705,5 +707,34 @@ console.log('SKUS',skus.length,skus.slice(0,10))
     > = Object.fromEntries(skus.map(s => [s.date.value, { date: s.date.value, totalAmount: s.amount, totalCount: s.productsCount }]));
 
     return Object.values(abstractData)
+
+}
+
+
+export async function getAbstractSkusPurchases(
+    purchaseDetailsRepo: Repository<PurDocumentsDetails>,
+    csmCompany: ComCompanies,
+) {
+
+    const today = new Date();
+    const init = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+
+    const dates = getDatesBetween(init, today);
+
+    const abstractData: {
+        date: string,
+        totalCount: number
+    }[] = await purchaseDetailsRepo // tu entidad
+        .createQueryBuilder('detail')
+        .select('DATE(detail.created_at)', 'date')
+        .addSelect('COUNT(DISTINCT detail.product_id)', 'totalCount')
+        .where('detail.created_at BETWEEN :start AND :end', { start: dates[0].toISOString(), end: new Date((dates.at(-1) as Date)?.getTime() + 86400000).toISOString() })
+        .andWhere('detail.company_id = :companyId', { companyId: csmCompany.id })
+        .groupBy('date')
+        .orderBy('date', 'DESC')
+        .getRawMany();
+
+
+    return abstractData
 
 }

@@ -22,9 +22,10 @@ import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { proxyOpenaiController } from "./openai-proxy";
 import { starsoftController } from "./starsoft.controller";
-import { SalDocuments } from "./csm-sale/csm-sale.entity";
-import { getAbstractCashClosings, getAbstractData, getAbstractExpense, getAbstractPurchases, getAbstractSales, getAbstractSkus } from "./abstaract-sales.service";
+import { getAbstractCashClosings, getAbstractData, getAbstractExpense, getAbstractPurchases, getAbstractSales, getAbstractSkus, getAbstractSkusPurchases, getAbstractSkusSales } from "./abstaract-sales.service";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
+import archiver from 'archiver'
+import { PassThrough } from 'stream'
 
 process.env.TZ = "UTC";
 const app = new Hono();
@@ -995,6 +996,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
   const cashClosingsRepo = datasource.sales.getRepository(SalCashDeskClosing);
   const csmPurchasesRepo = datasource.sales.getRepository(PurDocuments);
+  const purchaseDetailsRepo = datasource.sales.getRepository(PurDocumentsDetails);
   const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
   const expensesRepo = expenseDataSource.getRepository(ExpenseEntity);
 
@@ -1018,8 +1020,13 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
   );
 
 
-  const abstractSkus = await getAbstractSkus(
+  const abstractSkusSales = await getAbstractSkusSales(
     warehouses.map(w => `${aclCompany.id}-${w.id}`)
+  );
+
+  const abstractSkusPurchases = await getAbstractSkusPurchases(
+    purchaseDetailsRepo,
+    csmCompany
   );
 
 
@@ -1094,7 +1101,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     const skusArrayCsv = [
       ['date', 'skus_amount', 'skus_count']
     ]
-    for (const abstract of abstractSkus) {
+    for (const abstract of abstractSkusSales) {
 
       const d = {
         date: `"${abstract.date}"`,
@@ -1103,21 +1110,69 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
       }
       skusArrayCsv.push(Object.values(d))
     }
-    const skusCsv = (skusArrayCsv.map(l => l.join(',')).join('\n'))
+    const skusSalesCsv = (skusArrayCsv.map(l => l.join(',')).join('\n'))
 
-     // 1. Serialize JSON to string
-  // const jsonString = JSON.stringify(data, null, 2);
-  
-  // // 2. Set headers for download
-  // c.header('Content-Disposition', 'attachment; filename="data.json"');
-  // c.header('Content-Type', 'application/json');
-  
-  // // 3. Return body directly
-  // return c.body(jsonString);
+    const skusPurchasesArrayCsv = [
+      ['date', 'skus_count']
+    ]
+    for (const abstract of abstractSkusPurchases) {
 
-    return c.text([salesCsv, purchasesCsv, cashClosingsCsv, expensesCsv, skusCsv].join('\n------\n'))
+      const d = {
+        date: `"${abstract.date}"`,
+        skusCount: abstract?.totalCount ?? 0,
+      }
+      skusArrayCsv.push(Object.values(d))
+    }
+    const skusPurchasesCsv = (skusPurchasesArrayCsv.map(l => l.join(',')).join('\n'))
+
+    // 1. Serialize JSON to string
+    // const jsonString = JSON.stringify(data, null, 2);
+
+    // // 2. Set headers for download
+    // c.header('Content-Disposition', 'attachment; filename="data.json"');
+    // c.header('Content-Type', 'application/json');
+
+    // // 3. Return body directly
+    // return c.body(jsonString);
+
+
+
+    const stream = new PassThrough()
+
+    const archive = archiver('zip', {
+      zlib: { level: 9 },
+    })
+
+    // Manejo de errores
+    archive.on('error', (err) => {
+      console.error(err)
+      stream.destroy(err)
+    })
+
+    // Pipe del ZIP hacia el stream
+    archive.pipe(stream)
+
+
+    archive.append(salesCsv, { name: 'sales.csv' })
+    archive.append(purchasesCsv, { name: 'purchases.csv' })
+    archive.append(cashClosingsCsv, { name: 'cashClosings.csv' })
+    archive.append(expensesCsv, { name: 'expenses.csv' })
+    archive.append(skusSalesCsv, { name: 'skusSales.csv' })
+    archive.append(skusPurchasesCsv, { name: 'skusPurchases.csv' })
+
+    // Finaliza el ZIP
+    archive.finalize()
+
+    // 👇 Headers correctos para descarga
+    c.header('Content-Type', 'application/zip')
+    c.header('Content-Disposition', 'attachment; filename="data.zip"')
+
+    // 👇 Devolver stream como response
+    return new Response(stream as any)
+
+
   }
-  return c.json({ terminals, warehouses, subsidiaries, abstractSales, abstractPurchases, abstractCashClosings, abstractExpenses, abstractSkus });
+  return c.json({ terminals, warehouses, subsidiaries, abstractSales, abstractPurchases, abstractCashClosings, abstractExpenses, abstractSkusPurchases, abstractSkusSales, abstractSkus: abstractSkusSales });
 
 });
 
@@ -1553,6 +1608,7 @@ app.get("abstract/skus/acl-code/:aclCode", async (c) => {
 
 import { htmlDashboard } from "./dashboard";
 import { ExpenseEntity } from "./expense.entity";
+import { PurDocumentsDetails } from "./PurDocumentsDetails";
 
 app.get('/dashboard/:aclCode', async (c) => {
   const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
@@ -1564,7 +1620,7 @@ app.get('/dashboard/:aclCode', async (c) => {
     return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404);
   }
   console.log(aclCompany);
-  
+
   return c.html(htmlDashboard(aclCompany))
 })
 
