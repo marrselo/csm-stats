@@ -22,9 +22,9 @@ import { SalOrders } from "./csm-order.entity";
 import { WarDocumentKardex } from "./csm-document-kardex.entity";
 import { proxyOpenaiController } from "./openai-proxy";
 import { starsoftController } from "./starsoft.controller";
-import { getAbstractCashClosings, getAbstractData, getAbstractExpense, getAbstractPurchases, getAbstractSales, getAbstractSkus, getAbstractSkusPurchases, getAbstractSkusSales } from "./abstaract-sales.service";
+import { getAbstractCashClosings, getAbstractData, getAbstractExpense, getAbstractPurchases, getAbstractSales, getAbstractSkusPurchases, getAbstractSkusSales } from "./abstaract-sales.service";
 import { SalCashDeskClosing } from "./SalCashDeskClosing";
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 import { PassThrough } from 'stream'
 
 process.env.TZ = "UTC";
@@ -1139,7 +1139,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
     const stream = new PassThrough()
 
-    const archive = archiver('zip', {
+    const archive = new ZipArchive( {
       zlib: { level: 9 },
     })
 
