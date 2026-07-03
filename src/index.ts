@@ -668,6 +668,8 @@ app.get("warehouses", async (c) => {
   const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
   const aclCompanies = await aclCompanyRepo.find({});
   const aclTemplates = await aclTemplateRepo.find({});
+  const csmNodesQuery = c.req.query('csmNodes')
+  const csmNodes = csmNodesQuery ? csmNodesQuery.split(',') : ['n1', 'n3', 'n4', 'n5']
 
   const templateCsmNode = Object.fromEntries(
     aclTemplates.map((t) => {
@@ -692,6 +694,7 @@ app.get("warehouses", async (c) => {
   aclCompanies.forEach((c) => {
     if (!c.templateId) return;
     const csmNode = templateCsmNode[c.templateId];
+    if (!csmNodes.includes(csmNode)) return
     // if (!csmNodesMap[csmNode]) return;
 
     if (groups[csmNode]) {
@@ -711,6 +714,8 @@ app.get("warehouses", async (c) => {
   const allWarehouses: SalWarehouse[] = [];
 
   for (const csmNode in groups) {
+    if (!csmNodes.includes(csmNode)) continue
+
     const datasource = getDatasource(csmNode);
     if (!datasource) continue;
     const nodeCompanies = groups[csmNode];
@@ -1068,13 +1073,13 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     const purchasesCsv = (purchasesArrayCsv.map(l => l.join(',')).join('\n'))
 
     const cashClosingsArrayCsv = [
-      ['date','terminal_id' ,'cash_closings_amount', 'cash_closings_count']
+      ['date', 'terminal_id', 'cash_closings_amount', 'cash_closings_count']
     ]
     for (const abstract of abstractCashClosings) {
 
       const d = {
         date: `"${abstract.date}"`,
-        terminalId:abstract.terminalId,
+        terminalId: abstract.terminalId,
         cashClosingsAmount: abstract?.totalAmount ?? 0,
         cashClosingsCount: abstract?.totalCount ?? 0,
       }
