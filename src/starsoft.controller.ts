@@ -153,7 +153,7 @@ starsoftController.get("/bank-transactions/expenses", async (c) => {
       paymentDate: string;
       operationNumber: string;
       proofDocumentId: number;
-      transactionSupplierId:number;
+      transactionSupplierId: number;
     }[] = await datasource.sales.query(
       `
       SELECT
