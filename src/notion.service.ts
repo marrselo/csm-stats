@@ -1,4 +1,4 @@
-import { MoreThanOrEqual, Repository } from "typeorm";
+import { Between, MoreThanOrEqual, Repository } from "typeorm";
 import { AbstractSale } from "./abstract-sale/sale-abstract.entity";
 import { ComCompanies } from "./csm-company/csm-company.entity";
 import { getDatasource } from "./datasources";
@@ -53,7 +53,7 @@ function transformPropsNotion(row: Record<string, any>): Record<string, null | n
         war[column] = properties[column][properties[column].type];
     }
 
-    console.log('ROW', JSON.stringify(row), war);
+    // console.log('ROW', JSON.stringify(row), war);
 
 
     return { pageId: row.id, props: war } as any;
@@ -143,7 +143,7 @@ async function listWarehouses(
         })
 
         const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
-        console.log({ responseBody });
+        // console.log({ responseBody });
 
         return {
             // items: responseBody.results,
@@ -246,7 +246,7 @@ async function listCompanies(
         })
 
         const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
-        console.log({ responseBody });
+        // console.log({ responseBody });
 
         return {
             // items: responseBody.results,
@@ -394,62 +394,109 @@ async function getDataWC(
     const limitDate = new Date()
     limitDate.setDate(limitDate.getDate() - 30)
 
-    const sales = await abstractSaleRepo.find({
-        where: {
-            createdAt: MoreThanOrEqual(limitDate.getTime()),
-        },
-        select: {
-            id: true,
-            amount: true,
-            warehouseId: true,
-            type: true,
-            createdAt: true,
-            aclId: true,
 
-        },
-    });
     const companies = await companiesRepo.find({
         select: {
             id: true,
             aclCode: true,
             aclId: true
-
         },
     });
 
+
     const companiesMap = new Map(companies.map(c => [c.aclId, c]))
 
-    const warehousesSalesMap: Map<string, { id: number, uid: string, aclId: number, aclCode: string, amount: number, quantity: number }> = new Map()
-    const companiesSalesMap: Map<string, { id: number, aclId: number, aclCode: string, amount: number, quantity: number }> = new Map()
+    const warehousesSalesMap: Map<string, { uid: string, amount: number, quantity: number }> = new Map()
+    const companiesSalesMap: Map<string, { aclCode: string, amount: number, quantity: number }> = new Map()
 
-    for (const sale of sales) {
-        if (!sale.aclId) continue
-        if (!sale.warehouseId) continue
+    const chunkSize = 10000
 
-        const company = companiesMap.get(sale.aclId)
-        if (!company) continue
 
-        const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
-        const aclCode = `${company.aclCode}`
-        if (!warehousesSalesMap.has(warehouseUid)) {
-            warehousesSalesMap.set(warehouseUid, { aclCode, aclId: sale.aclId, amount: 0, id: sale.warehouseId, quantity: 0, uid: warehouseUid })
+    const firstSale = await abstractSaleRepo.findOne({
+        where: {
+            createdAt: MoreThanOrEqual(limitDate.getTime()),
+        },
+        select: { id: true },
+        order: { id: "ASC" },
+    });
+
+    if (!firstSale || !firstSale.id) {
+        throw new Error('MISSING_FIRST_SALE')
+    }
+
+
+    const lastSale = await abstractSaleRepo.findOne({
+        where: {},
+        select: { id: true },
+        order: { id: "DESC" },
+    });
+
+    if (!lastSale || !lastSale.id)         throw new Error('MISSING_FIRST_SALE')
+
+
+    const firstId = firstSale.id
+    const lastId = lastSale.id
+
+    if (lastSale.id - firstSale.id <= 0) {
+        console.log("No hay filas para escanear ", lastSale.id - firstSale.id);
+                throw new Error('MISSING_ROWS')
+
+    }
+
+    const chunksCount = (lastId - firstId) / chunkSize;
+
+    for (let i = 0; i <= chunksCount; i++) {
+        const fromId = i * chunkSize + firstId;
+        const toId =
+            Math.floor(chunksCount) === i
+                ? lastId
+                : i * chunkSize + chunkSize + firstId - 1;
+        console.log(`📥 Scanning rows ${fromId} - ${toId} `);
+
+        const sales = await abstractSaleRepo.find({
+            where: { id: Between(fromId, toId) },
+            select: {
+                amount: true,
+                warehouseId: true,
+                aclId: true,
+
+            },
+        });
+
+
+        if (sales && sales.length) {
+            for (const sale of sales) {
+                if (!sale.aclId) continue
+                if (!sale.warehouseId) continue
+
+                const company = companiesMap.get(sale.aclId)
+                if (!company) continue
+
+                const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
+                const aclCode = `${company.aclCode}`
+                if (!warehousesSalesMap.has(warehouseUid)) {
+                    warehousesSalesMap.set(warehouseUid, { amount: 0, quantity: 0, uid: warehouseUid })
+                }
+                if (!companiesSalesMap.has(aclCode)) {
+                    companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0 })
+                }
+
+                const wsd = warehousesSalesMap.get(warehouseUid)
+                if (!wsd) continue
+                wsd.amount += Number(sale.amount)
+                wsd.quantity += 1
+
+                const csd = companiesSalesMap.get(aclCode)
+                if (!csd) continue
+                csd.amount += Number(sale.amount)
+                csd.quantity += 1
+            }
+
+            console.log(
+                `📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`,
+            );
         }
-        if (!companiesSalesMap.has(aclCode)) {
-            companiesSalesMap.set(aclCode, { aclCode: company.aclCode ?? '', aclId: sale.aclId, amount: 0, id: sale.warehouseId, quantity: 0 })
-        }
-
-        const wsd = warehousesSalesMap.get(warehouseUid)
-        if (!wsd) continue
-        wsd.amount += Number(sale.amount)
-        wsd.quantity += 1
-
-        const csd = companiesSalesMap.get(aclCode)
-        if (!csd) continue
-        csd.amount += Number(sale.amount)
-        csd.quantity += 1
-
-
-
+        console.log(`DATETIME :${new Date().toISOString()}`);
     }
 
     return { companies: Array.from(companiesSalesMap.values()), warehouses: Array.from(warehousesSalesMap.values()) }
@@ -518,7 +565,7 @@ async function updatePage(
     }
 
     const body = JSON.stringify({ properties })
-    console.log(body);
+    // console.log(body);
 
 
     const res = await fetch(`${NOTION_API_URL}/pages/${pageId}`, {
@@ -533,7 +580,7 @@ async function updatePage(
     })
 
     const resBody = await res.json()
-    console.log(res, resBody);
+    // console.log(res, resBody);
 
     return resBody
 
