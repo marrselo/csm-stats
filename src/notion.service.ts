@@ -9,7 +9,6 @@ const NOTION_CLIENTS_DATABASE_ID = process.env.NOTION_CLIENTS_DATABASE_ID;
 const NOTION_API_URL = "https://api.notion.com/v1";
 const DEFAULT_NOTION_VERSION = "2022-06-28";
 
-
 function transformPropsNotion(row: Record<string, any>): Record<string, null | number | string> {
     const war = {};
     const properties = row.properties
@@ -52,10 +51,7 @@ function transformPropsNotion(row: Record<string, any>): Record<string, null | n
 
         war[column] = properties[column][properties[column].type];
     }
-
     // console.log('ROW', JSON.stringify(row), war);
-
-
     return { pageId: row.id, props: war } as any;
 }
 
@@ -133,7 +129,7 @@ async function listWarehouses(
     }
 
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query`, {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -170,7 +166,7 @@ async function listCompanies(
     startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
     console.log(`REQUESTING_COMPANIES_${pageSize}_${startCursor}`);
-    
+
     const filter: any = {
     };
     // const filter: any = {
@@ -238,7 +234,7 @@ async function listCompanies(
     }
 
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query`, {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?filter_properties=%5Edo%5D&filter_properties=title`, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -280,11 +276,12 @@ async function findWarehouseById(warehouseId: string) {
                     }
                 }
             ]
-        }
+        },
+
     });
     try {
         const response = await fetch(
-            `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query`,
+            `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`,
             {
                 method: 'POST',
                 headers: {
@@ -399,8 +396,8 @@ async function getDataWC(
 
     const companiesMap = new Map(companies.map(c => [c.aclId, c]))
 
-    const warehousesSalesMap: Map<string, { uid: string, amount: number, quantity: number }> = new Map()
-    const companiesSalesMap: Map<string, { aclCode: string, amount: number, quantity: number }> = new Map()
+    const warehousesSalesMap: Map<string, { uid: string, amount: number, quantity: number, lastSaleTs: number }> = new Map()
+    const companiesSalesMap: Map<string, { aclCode: string, amount: number, quantity: number, lastSaleTs: number }> = new Map()
 
     const chunkSize = 50000
 
@@ -427,7 +424,7 @@ async function getDataWC(
     const firstId = firstSale.id
     const lastId = lastSale.id
 
-        console.log(`ANALYZING_SALES_ROWS_${lastSale.id}-${firstSale.id}=>${lastSale.id - firstSale.id}`);
+    console.log(`ANALYZING_SALES_ROWS_${lastSale.id}-${firstSale.id}=>${lastSale.id - firstSale.id}`);
 
     if (lastSale.id - firstSale.id <= 0) {
         throw new Error('MISSING_ROWS')
@@ -449,6 +446,7 @@ async function getDataWC(
                 amount: true,
                 warehouseId: true,
                 aclId: true,
+                createdAt: true
 
             },
         });
@@ -464,21 +462,24 @@ async function getDataWC(
                 const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
                 const aclCode = `${company.aclCode}`
                 if (!warehousesSalesMap.has(warehouseUid)) {
-                    warehousesSalesMap.set(warehouseUid, { amount: 0, quantity: 0, uid: warehouseUid })
+                    warehousesSalesMap.set(warehouseUid, { amount: 0, quantity: 0, uid: warehouseUid, lastSaleTs: 0 })
                 }
                 if (!companiesSalesMap.has(aclCode)) {
-                    companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0 })
+                    companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0, lastSaleTs: 0 })
                 }
 
                 const wsd = warehousesSalesMap.get(warehouseUid)
                 if (!wsd) continue
                 wsd.amount += Number(sale.amount)
                 wsd.quantity += 1
+                wsd.lastSaleTs = Math.max(wsd.lastSaleTs, sale.createdAt)
 
                 const csd = companiesSalesMap.get(aclCode)
                 if (!csd) continue
                 csd.amount += Number(sale.amount)
                 csd.quantity += 1
+                csd.lastSaleTs = Math.max(csd.lastSaleTs, sale.createdAt)
+
             }
 
             console.log(
@@ -504,23 +505,6 @@ export async function updateNotionData() {
 
         const salesData = await getDataWC(abstractSaleRepo, csmCompanyRepo)
 
-        for (const warehouseData of salesData.warehouses) {
-            const pageId = nWarehouseMap.get(warehouseData.uid)
-
-            if (!pageId) continue
-            console.log(`UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`);
-
-            await updatePage(pageId, {
-                "Cantidad de ventas ultimo mes": {
-                    "number": warehouseData.quantity
-                },
-                'Fecha ultima actualizacion': {
-                    date: { start: now.toISOString() },
-                }
-            })
-            await Bun.sleep(350)
-        }
-
         for (const companyData of salesData.companies) {
 
             const pageId = nCompaniesMap.get(companyData.aclCode)
@@ -534,10 +518,41 @@ export async function updateNotionData() {
                 },
                 'ULT ACTUALIZACION': {
                     date: { start: now.toISOString() },
+                },
+                'Fecha ultima consulta': {
+                    date: { start: now.toISOString() },
+                },
+                "Fecha ultima venta": {
+                    "date": new Date(companyData.lastSaleTs).toISOString() 
+                },
+                "Total venta ultimo mes": {
+                    "number": companyData.amount
+                },
+            })
+            await Bun.sleep(350)
+        }
+
+        for (const warehouseData of salesData.warehouses) {
+            const pageId = nWarehouseMap.get(warehouseData.uid)
+
+            if (!pageId) continue
+            console.log(`UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`);
+
+            await updatePage(pageId, {
+                "Cantidad de ventas ultimo mes": {
+                    "number": warehouseData.quantity
+                },
+                'Fecha ultima actualizacion': {
+                    date: { start: now.toISOString() },
+                },
+                "Total venta ultimo mes": {
+                    number: warehouseData.amount
                 }
             })
             await Bun.sleep(350)
         }
+
+
     }
 }
 
@@ -548,7 +563,7 @@ async function updatePage(
     pageId: string,
     properties: NotionProperties,
 ) {
-    if (!pageId.trim())         throw new Error("MISSING_OR_INVALID_PAGE_ID");
+    if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
 
     const body = JSON.stringify({ properties })
 
@@ -579,7 +594,7 @@ async function updatePage(
 //             2,
 //             null
 //         );
-// console.log(c.items[0].props);
+// console.log(c.items[1].props);
 
 // await updatePage(
 //     '3de8f8ca-a2a8-8161-817b-dbe77c5c3eee',
@@ -603,4 +618,9 @@ async function updatePage(
 // const w = await findWarehouseById('EMP5235HAQ - 11698')
 // console.log(w)
 // const w = await findWarehouseById('EMP1873LIV - 9002')
+// console.log(transformPropsNotion(w.results[0]))
+
+
+// const w = await findWarehouseById('EMP4522DIN - 11059')
+// console.log('DATA',w)
 // console.log(transformPropsNotion(w.results[0]))
