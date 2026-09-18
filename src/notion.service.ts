@@ -161,7 +161,6 @@ async function listWarehouses(
 }
 
 async function listCompanies(
-    rawFilters: Record<string, string>,
     pageSize: number,
     startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
@@ -179,51 +178,6 @@ async function listCompanies(
     //         }
     //     ]
     // };
-
-    if (rawFilters.department && rawFilters.department?.trim() !== '') {
-        filter.and.push({
-            property: 'Departamento',
-            select: {
-                equals: rawFilters.department?.trim()
-            }
-        });
-    }
-    if (rawFilters.province && rawFilters.province?.trim() !== '') {
-        filter.and.push({
-            property: 'Provincia',
-            select: {
-                equals: rawFilters.province?.trim()
-            }
-        });
-    }
-    if (rawFilters.district && rawFilters.district?.trim() !== '') {
-        filter.and.push({
-            property: 'Distrito',
-            select: {
-                equals: rawFilters.district?.trim()
-            }
-        });
-    }
-    if (rawFilters.rubro && rawFilters.rubro?.trim() !== '') {
-        filter.and.push({
-            property: 'Rubro',
-            rollup: {
-                any: {
-                    select: {
-                        equals: rawFilters.rubro?.trim()
-                    }
-                }
-            }
-        });
-    }
-    if (rawFilters.ubigeo && rawFilters.ubigeo?.trim() !== '') {
-        filter.and.push({
-            property: 'Ubigeo',
-            rich_text: {
-                equals: rawFilters.ubigeo?.trim()
-            }
-        });
-    }
 
     const requestBody: any = {
         page_size: pageSize
@@ -246,13 +200,59 @@ async function listCompanies(
         })
 
         const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
-        // console.log({ responseBody });
+
 
         return {
-            // items: responseBody.results,
-            // items: responseBody.results.map((i) =>
-            //     toCamelCase(transformRowNotion(i.properties))
-            // ),
+            items: responseBody.results.map((i) =>
+                transformPropsNotion(i)
+            ),
+            nextCursor: responseBody.next_cursor
+        };
+    } catch (_error) {
+        const error = _error as Error;
+        console.log(error);
+        throw error;
+    }
+}
+
+async function findCompanyByAclCode(
+    aclCode: string,
+): Promise<{ items: any[]; nextCursor?: string | null }> {
+    console.log(`REQUESTING_COMPANIES_${aclCode}`);
+
+
+    const filter: any = {
+        and: [
+            {
+                property: 'ACL',
+               rich_text: {
+                        equals: String(aclCode)
+                    }
+            }
+        ]
+    };
+
+    const requestBody: any = {
+        page_size: 2,
+        filter
+    };
+
+    try {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?filter_properties=%5Edo%5D&filter_properties=title&filter_properties=%3FYJX&filter_properties=rO%3EV&filter_properties=%3Ce%5Es`, {
+            body: JSON.stringify(requestBody),
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+                'Notion-Version': DEFAULT_NOTION_VERSION
+            }
+
+        })
+
+        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
+
+
+        return {
             items: responseBody.results.map((i) =>
                 transformPropsNotion(i)
             ),
@@ -523,7 +523,7 @@ export async function updateNotionData() {
                     date: { start: now.toISOString() },
                 },
                 "Fecha ultima venta": {
-                    "date": new Date(companyData.lastSaleTs).toISOString() 
+                    "date":{start: new Date(companyData.lastSaleTs).toISOString() }
                 },
                 "Total venta ultimo mes": {
                     "number": companyData.amount
@@ -583,44 +583,3 @@ async function updatePage(
 
     return resBody
 }
-
-//  listWarehouses(
-//             {},
-//             5,
-//             null
-//         );
-//  const c = await listCompanies(
-//             {},
-//             2,
-//             null
-//         );
-// console.log(c.items[1].props);
-
-// await updatePage(
-//     '3de8f8ca-a2a8-8161-817b-dbe77c5c3eee',
-//     {
-//         'Nombre': {
-//             title: [{
-//                 "text": {
-//                     "content": 'Tienda 1' // Tienda 1
-//                 }
-//             }
-//             ]
-//         }, "Cantidad de ventas ultimo mes": {
-//             "number": 31
-//         }
-//     })
-// const w = await findWarehouseById('DES5234DAC - 9661')
-// console.log(transformPropsNotion(w.results[0]))
-
-
-
-// const w = await findWarehouseById('EMP5235HAQ - 11698')
-// console.log(w)
-// const w = await findWarehouseById('EMP1873LIV - 9002')
-// console.log(transformPropsNotion(w.results[0]))
-
-
-// const w = await findWarehouseById('EMP4522DIN - 11059')
-// console.log('DATA',w)
-// console.log(transformPropsNotion(w.results[0]))
