@@ -508,7 +508,7 @@ export async function updateNotionData() {
             const pageId = nWarehouseMap.get(warehouseData.uid)
 
             if (!pageId) continue
-            console.log(`UPDATING_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`);
+            console.log(`UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`);
 
             await updatePage(pageId, {
                 "Cantidad de ventas ultimo mes": {
@@ -526,7 +526,7 @@ export async function updateNotionData() {
             const pageId = nCompaniesMap.get(companyData.aclCode)
 
             if (!pageId) continue
-            console.log(`UPDATING_${pageId}_${companyData.aclCode} => ${companyData.quantity}`);
+            console.log(`UPDATING_COMPANY_${pageId}_${companyData.aclCode} => ${companyData.quantity}`);
 
             await updatePage(pageId, {
                 "Cantidad de ventas ultimo mes": {
