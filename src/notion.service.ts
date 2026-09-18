@@ -56,7 +56,6 @@ function transformPropsNotion(row: Record<string, any>): Record<string, null | n
 }
 
 async function listWarehouses(
-    rawFilters: Record<string, string>,
     pageSize: number,
     startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
@@ -334,7 +333,6 @@ async function getNotionWarehousesMap() {
     let startCursor: string | undefined | null;
     do {
         const res = await listWarehouses(
-            {},
             pageSize,
             startCursor
         );
@@ -360,7 +358,6 @@ async function getNotionCompaniesMap() {
     let startCursor: string | undefined | null;
     do {
         const res = await listCompanies(
-            {},
             pageSize,
             startCursor
         );
@@ -579,7 +576,6 @@ async function updatePage(
     })
 
     const resBody = await res.json()
-    // console.log(res, resBody);
 
     return resBody
 }
