@@ -74,51 +74,6 @@ async function listWarehouses(
     //     ]
     // };
 
-    if (rawFilters.department && rawFilters.department?.trim() !== '') {
-        filter.and.push({
-            property: 'Departamento',
-            select: {
-                equals: rawFilters.department?.trim()
-            }
-        });
-    }
-    if (rawFilters.province && rawFilters.province?.trim() !== '') {
-        filter.and.push({
-            property: 'Provincia',
-            select: {
-                equals: rawFilters.province?.trim()
-            }
-        });
-    }
-    if (rawFilters.district && rawFilters.district?.trim() !== '') {
-        filter.and.push({
-            property: 'Distrito',
-            select: {
-                equals: rawFilters.district?.trim()
-            }
-        });
-    }
-    if (rawFilters.rubro && rawFilters.rubro?.trim() !== '') {
-        filter.and.push({
-            property: 'Rubro',
-            rollup: {
-                any: {
-                    select: {
-                        equals: rawFilters.rubro?.trim()
-                    }
-                }
-            }
-        });
-    }
-    if (rawFilters.ubigeo && rawFilters.ubigeo?.trim() !== '') {
-        filter.and.push({
-            property: 'Ubigeo',
-            rich_text: {
-                equals: rawFilters.ubigeo?.trim()
-            }
-        });
-    }
-
     const requestBody: any = {
         page_size: pageSize
     };
