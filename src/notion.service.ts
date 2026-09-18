@@ -1,0 +1,570 @@
+import { MoreThanOrEqual, Repository } from "typeorm";
+import { AbstractSale } from "./abstract-sale/sale-abstract.entity";
+import { ComCompanies } from "./csm-company/csm-company.entity";
+import { getDatasource } from "./datasources";
+
+const NOTION_ACCESS_TOKEN = process.env.NOTION_ACCESS_TOKEN;
+const NOTION_WAREHOUSES_DATABASE_ID = process.env.NOTION_WAREHOUSES_DATABASE_ID;
+const NOTION_CLIENTS_DATABASE_ID = process.env.NOTION_CLIENTS_DATABASE_ID;
+const NOTION_API_URL = "https://api.notion.com/v1";
+const DEFAULT_NOTION_VERSION = "2022-06-28";
+
+
+function transformPropsNotion(row: Record<string, any>): Record<string, null | number | string> {
+    const war = {};
+    const properties = row.properties
+    for (const column in properties) {
+        const valueContent = properties[column][properties[column].type];
+        const columnType = properties[column].type;
+
+        if (valueContent === null || valueContent === undefined) {
+            war[column] = null;
+            continue;
+        }
+
+        if (columnType === 'rollup') {
+            // console.log(column,properties[column]);
+            if (!valueContent.array[0]) {
+                war[column] = null
+                continue
+            }
+            const typeRollup = valueContent.array[0].type
+
+            war[column] = valueContent.array[0][typeRollup] ?? null;
+            continue;
+        }
+        if (columnType === 'formula') {
+            // console.log(column,properties[column]);
+
+            const typeFormula = valueContent.type
+
+            war[column] = valueContent[typeFormula] ?? null;
+            continue;
+        }
+        if (Array.isArray(valueContent)) {
+            war[column] = valueContent.map((c) => c.plain_text).join('  ');
+            continue;
+        }
+        if (typeof valueContent === 'object') {
+            war[column] = valueContent.start ?? valueContent.name;
+            continue;
+        }
+
+        war[column] = properties[column][properties[column].type];
+    }
+
+    console.log('ROW', JSON.stringify(row), war);
+
+
+    return { pageId: row.id, props: war } as any;
+}
+
+async function listWarehouses(
+    rawFilters: Record<string, string>,
+    pageSize: number,
+    startCursor?: string | null
+): Promise<{ items: any[]; nextCursor?: string | null }> {
+    const filter: any = {
+    };
+    // const filter: any = {
+    //     and: [
+    //         {
+    //             property: 'Uso del sistema',
+    //             checkbox: {
+    //                 equals: true
+    //             }
+    //         }
+    //     ]
+    // };
+
+    if (rawFilters.department && rawFilters.department?.trim() !== '') {
+        filter.and.push({
+            property: 'Departamento',
+            select: {
+                equals: rawFilters.department?.trim()
+            }
+        });
+    }
+    if (rawFilters.province && rawFilters.province?.trim() !== '') {
+        filter.and.push({
+            property: 'Provincia',
+            select: {
+                equals: rawFilters.province?.trim()
+            }
+        });
+    }
+    if (rawFilters.district && rawFilters.district?.trim() !== '') {
+        filter.and.push({
+            property: 'Distrito',
+            select: {
+                equals: rawFilters.district?.trim()
+            }
+        });
+    }
+    if (rawFilters.rubro && rawFilters.rubro?.trim() !== '') {
+        filter.and.push({
+            property: 'Rubro',
+            rollup: {
+                any: {
+                    select: {
+                        equals: rawFilters.rubro?.trim()
+                    }
+                }
+            }
+        });
+    }
+    if (rawFilters.ubigeo && rawFilters.ubigeo?.trim() !== '') {
+        filter.and.push({
+            property: 'Ubigeo',
+            rich_text: {
+                equals: rawFilters.ubigeo?.trim()
+            }
+        });
+    }
+
+    const requestBody: any = {
+        page_size: pageSize
+    };
+
+    if (startCursor && startCursor?.trim() !== '') {
+        requestBody.start_cursor = startCursor;
+    }
+
+    try {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query`, {
+            body: JSON.stringify(requestBody),
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+                'Notion-Version': DEFAULT_NOTION_VERSION
+            }
+
+        })
+
+        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
+        console.log({ responseBody });
+
+        return {
+            // items: responseBody.results,
+            // items: responseBody.results.map((i) =>
+            //     toCamelCase(transformRowNotion(i.properties))
+            // ),
+            items: responseBody.results.map((i) =>
+                transformPropsNotion(i)
+            ),
+            nextCursor: responseBody.next_cursor
+        };
+    } catch (_error) {
+        const error = _error as Error;
+        console.log(error);
+        throw error;
+    }
+}
+
+async function listCompanies(
+    rawFilters: Record<string, string>,
+    pageSize: number,
+    startCursor?: string | null
+): Promise<{ items: any[]; nextCursor?: string | null }> {
+    const filter: any = {
+    };
+    // const filter: any = {
+    //     and: [
+    //         {
+    //             property: 'Uso del sistema',
+    //             checkbox: {
+    //                 equals: true
+    //             }
+    //         }
+    //     ]
+    // };
+
+    if (rawFilters.department && rawFilters.department?.trim() !== '') {
+        filter.and.push({
+            property: 'Departamento',
+            select: {
+                equals: rawFilters.department?.trim()
+            }
+        });
+    }
+    if (rawFilters.province && rawFilters.province?.trim() !== '') {
+        filter.and.push({
+            property: 'Provincia',
+            select: {
+                equals: rawFilters.province?.trim()
+            }
+        });
+    }
+    if (rawFilters.district && rawFilters.district?.trim() !== '') {
+        filter.and.push({
+            property: 'Distrito',
+            select: {
+                equals: rawFilters.district?.trim()
+            }
+        });
+    }
+    if (rawFilters.rubro && rawFilters.rubro?.trim() !== '') {
+        filter.and.push({
+            property: 'Rubro',
+            rollup: {
+                any: {
+                    select: {
+                        equals: rawFilters.rubro?.trim()
+                    }
+                }
+            }
+        });
+    }
+    if (rawFilters.ubigeo && rawFilters.ubigeo?.trim() !== '') {
+        filter.and.push({
+            property: 'Ubigeo',
+            rich_text: {
+                equals: rawFilters.ubigeo?.trim()
+            }
+        });
+    }
+
+    const requestBody: any = {
+        page_size: pageSize
+    };
+
+    if (startCursor && startCursor?.trim() !== '') {
+        requestBody.start_cursor = startCursor;
+    }
+
+    try {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query`, {
+            body: JSON.stringify(requestBody),
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+                'Notion-Version': DEFAULT_NOTION_VERSION
+            }
+
+        })
+
+        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
+        console.log({ responseBody });
+
+        return {
+            // items: responseBody.results,
+            // items: responseBody.results.map((i) =>
+            //     toCamelCase(transformRowNotion(i.properties))
+            // ),
+            items: responseBody.results.map((i) =>
+                transformPropsNotion(i)
+            ),
+            nextCursor: responseBody.next_cursor
+        };
+    } catch (_error) {
+        const error = _error as Error;
+        console.log(error);
+        throw error;
+    }
+}
+
+async function findWarehouseById(warehouseId: string) {
+    const bodyReq = JSON.stringify({
+        filter: {
+            and: [
+                {
+                    property: 'id Tienda',
+                    rich_text: {
+                        equals: String(warehouseId)
+                    }
+                }
+            ]
+        }
+    });
+    try {
+        const response = await fetch(
+            `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+                    'Notion-Version': DEFAULT_NOTION_VERSION
+                },
+                body: bodyReq
+            }
+        );
+
+        const responseBody = await response.json();
+        return responseBody;
+    } catch (_error) {
+        const error = _error as Error;
+        console.log(error);
+        throw error;
+    }
+}
+
+async function findRubros() {
+    try {
+        const res = await fetch(
+            `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+                    Accept: 'application/json',
+                    'Notion-Version': DEFAULT_NOTION_VERSION
+                }
+            }
+        )
+            ;
+
+        const responseBody = await res.json() as unknown as { properties: any };
+        // console.log(responseBody.properties);
+
+        return responseBody.properties['NEGOCIO'].select.options;
+    } catch (_error) {
+        const error = _error as Error;
+        console.log(error);
+        throw error;
+    }
+}
+
+
+async function getNotionWarehousesMap() {
+
+    const notionWarehousesMap = new Map()
+
+    const pageSize = 100;
+    let startCursor: string | undefined | null;
+    do {
+        const res = await listWarehouses(
+            {},
+            pageSize,
+            startCursor
+        );
+
+
+        const notionWarehouses = res.items;
+        startCursor = res.nextCursor;
+
+        for (const nw of notionWarehouses) {
+
+            notionWarehousesMap.set(nw.props['id Tienda'], nw.pageId)
+        }
+        await Bun.sleep(400)
+
+
+    } while (startCursor);
+
+    return notionWarehousesMap
+}
+async function getNotionCompaniesMap() {
+
+    const notionCompaniesMap = new Map()
+
+    const pageSize = 100;
+    let startCursor: string | undefined | null;
+    do {
+        const res = await listCompanies(
+            {},
+            pageSize,
+            startCursor
+        );
+
+
+        const notionCompanies = res.items;
+        startCursor = res.nextCursor;
+
+        for (const nc of notionCompanies) {
+
+            notionCompaniesMap.set(nc.props['ACL'], nc.pageId)
+        }
+        await Bun.sleep(400)
+
+
+    } while (startCursor);
+
+    return notionCompaniesMap
+}
+
+
+
+async function getDataWC(
+    abstractSaleRepo: Repository<AbstractSale>,
+    companiesRepo: Repository<ComCompanies>,
+) {
+    const today = new Date();
+    const limitDate = new Date()
+    limitDate.setDate(limitDate.getDate() - 30)
+
+    const sales = await abstractSaleRepo.find({
+        where: {
+            createdAt: MoreThanOrEqual(limitDate.getTime()),
+        },
+        select: {
+            id: true,
+            amount: true,
+            warehouseId: true,
+            type: true,
+            createdAt: true,
+            aclId: true,
+
+        },
+    });
+    const companies = await companiesRepo.find({
+        select: {
+            id: true,
+            aclCode: true,
+            aclId: true
+
+        },
+    });
+
+    const companiesMap = new Map(companies.map(c => [c.aclId, c]))
+
+    const warehousesSalesMap: Map<string, { id: number, uid: string, aclId: number, aclCode: string, amount: number, quantity: number }> = new Map()
+    const companiesSalesMap: Map<string, { id: number, aclId: number, aclCode: string, amount: number, quantity: number }> = new Map()
+
+    for (const sale of sales) {
+        if (!sale.aclId) continue
+        if (!sale.warehouseId) continue
+
+        const company = companiesMap.get(sale.aclId)
+        if (!company) continue
+
+        const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
+        const aclCode = `${company.aclCode}`
+        if (!warehousesSalesMap.has(warehouseUid)) {
+            warehousesSalesMap.set(warehouseUid, { aclCode, aclId: sale.aclId, amount: 0, id: sale.warehouseId, quantity: 0, uid: warehouseUid })
+        }
+        if (!companiesSalesMap.has(aclCode)) {
+            companiesSalesMap.set(aclCode, { aclCode: company.aclCode ?? '', aclId: sale.aclId, amount: 0, id: sale.warehouseId, quantity: 0 })
+        }
+
+        const wsd = warehousesSalesMap.get(warehouseUid)
+        if (!wsd) continue
+        wsd.amount += Number(sale.amount)
+        wsd.quantity += 1
+
+        const csd = companiesSalesMap.get(aclCode)
+        if (!csd) continue
+        csd.amount += Number(sale.amount)
+        csd.quantity += 1
+
+
+
+    }
+
+    return { companies: Array.from(companiesSalesMap.values()), warehouses: Array.from(warehousesSalesMap.values()) }
+}
+
+
+export async function updateNotionData() {
+
+    const nWarehouseMap = await getNotionWarehousesMap()
+    const nCompaniesMap = await getNotionCompaniesMap()
+
+    for (const csmNode of ['n1', 'n3', 'n4', 'n5']) {
+        const datasource = getDatasource(csmNode);
+        const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
+        const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+
+        const salesData = await getDataWC(abstractSaleRepo, csmCompanyRepo)
+
+        for (const warehouseData of salesData.warehouses) {
+            const pageId = nWarehouseMap.get(warehouseData.uid)
+
+            if (!pageId) continue
+            console.log(`UPDATING_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`);
+
+            await updatePage(pageId, {
+                "Cantidad de ventas ultimo mes": {
+                    "number": warehouseData.quantity
+                }
+            })
+            await Bun.sleep(350)
+
+
+        }
+
+        for (const companyData of salesData.companies) {
+
+
+            const pageId = nCompaniesMap.get(companyData.aclCode)
+
+            if (!pageId) continue
+            console.log(`UPDATING_${pageId}_${companyData.aclCode} => ${companyData.quantity}`);
+
+
+            await updatePage(pageId, {
+                "Cantidad de ventas ultimo mes": {
+                    "number": companyData.quantity
+                }
+            })
+            await Bun.sleep(350)
+        }
+
+
+    }
+
+}
+
+type NotionProperty = Record<string, unknown>;
+type NotionProperties = Record<string, NotionProperty>;
+
+async function updatePage(
+    pageId: string,
+    properties: NotionProperties,
+) {
+    if (!pageId.trim()) {
+        throw new Error("pageId es obligatorio para actualizar un cliente");
+    }
+
+    const body = JSON.stringify({ properties })
+    console.log(body);
+
+
+    const res = await fetch(`${NOTION_API_URL}/pages/${pageId}`, {
+        method: 'PATCH',
+        body,
+        headers: {
+            Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'Notion-Version': DEFAULT_NOTION_VERSION
+        }
+    })
+
+    const resBody = await res.json()
+    console.log(res, resBody);
+
+    return resBody
+
+}
+
+//  listWarehouses(
+//             {},
+//             5,
+//             null
+//         );
+//  listCompanies(
+//             {},
+//             5,
+//             null
+//         );
+
+// await updatePage(
+//     '3de8f8ca-a2a8-8161-817b-dbe77c5c3eee',
+//     {
+//         'Nombre': {
+//             title: [{
+//                 "text": {
+//                     "content": 'Tienda 1' // Tienda 1
+//                 }
+//             }
+//             ]
+//         }, "Cantidad de ventas ultimo mes": {
+//             "number": 0
+//         }
+//     })
+// const w = await findWarehouseById('DES5234DAC - 9661')
+// console.log(transformPropsNotion(w.results[0]))
+// const w = await findWarehouseById('EMP5235HAQ - 11698')
+// console.log(w)

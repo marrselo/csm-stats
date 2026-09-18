@@ -1613,6 +1613,7 @@ app.get("abstract/skus/acl-code/:aclCode", async (c) => {
 import { htmlDashboard } from "./dashboard";
 import { ExpenseEntity } from "./expense.entity";
 import { PurDocumentsDetails } from "./PurDocumentsDetails";
+import { updateNotionData } from "./notion.service";
 
 app.get('/dashboard/:aclCode', async (c) => {
   const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
@@ -1626,6 +1627,18 @@ app.get('/dashboard/:aclCode', async (c) => {
   console.log(aclCompany);
 
   return c.html(htmlDashboard(aclCompany))
+})
+
+app.post('/update-notion', async (c) => {
+
+  updateNotionData().then(d=>{
+    console.log('FINISH_UPDATE_NOTION')
+  }).catch(err=>{
+    console.error('ERROR_UPDATE_NOTION',err)
+  })
+  
+
+  return c.json({status:'ok'})
 })
 
 
