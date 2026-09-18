@@ -64,6 +64,8 @@ async function listWarehouses(
     pageSize: number,
     startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
+    console.log(`REQUESTING_WAREHOUSES_${pageSize}_${startCursor}`);
+
     const filter: any = {
     };
     // const filter: any = {
@@ -167,6 +169,8 @@ async function listCompanies(
     pageSize: number,
     startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
+    console.log(`REQUESTING_COMPANIES_${pageSize}_${startCursor}`);
+    
     const filter: any = {
     };
     // const filter: any = {
@@ -312,8 +316,7 @@ async function findRubros() {
                     'Notion-Version': DEFAULT_NOTION_VERSION
                 }
             }
-        )
-            ;
+        );
 
         const responseBody = await res.json() as unknown as { properties: any };
         // console.log(responseBody.properties);
@@ -325,7 +328,6 @@ async function findRubros() {
         throw error;
     }
 }
-
 
 async function getNotionWarehousesMap() {
 
@@ -340,21 +342,19 @@ async function getNotionWarehousesMap() {
             startCursor
         );
 
-
         const notionWarehouses = res.items;
         startCursor = res.nextCursor;
 
         for (const nw of notionWarehouses) {
-
             notionWarehousesMap.set(nw.props['id Tienda'], nw.pageId)
         }
-        await Bun.sleep(400)
-
+        await Bun.sleep(350)
 
     } while (startCursor);
 
     return notionWarehousesMap
 }
+
 async function getNotionCompaniesMap() {
 
     const notionCompaniesMap = new Map()
@@ -368,23 +368,18 @@ async function getNotionCompaniesMap() {
             startCursor
         );
 
-
         const notionCompanies = res.items;
         startCursor = res.nextCursor;
 
         for (const nc of notionCompanies) {
-
             notionCompaniesMap.set(nc.props['ACL'], nc.pageId)
         }
-        await Bun.sleep(400)
-
+        await Bun.sleep(350)
 
     } while (startCursor);
 
     return notionCompaniesMap
 }
-
-
 
 async function getDataWC(
     abstractSaleRepo: Repository<AbstractSale>,
@@ -394,7 +389,6 @@ async function getDataWC(
     const limitDate = new Date()
     limitDate.setDate(limitDate.getDate() - 30)
 
-
     const companies = await companiesRepo.find({
         select: {
             id: true,
@@ -403,14 +397,12 @@ async function getDataWC(
         },
     });
 
-
     const companiesMap = new Map(companies.map(c => [c.aclId, c]))
 
     const warehousesSalesMap: Map<string, { uid: string, amount: number, quantity: number }> = new Map()
     const companiesSalesMap: Map<string, { aclCode: string, amount: number, quantity: number }> = new Map()
 
-    const chunkSize = 10000
-
+    const chunkSize = 50000
 
     const firstSale = await abstractSaleRepo.findOne({
         where: {
@@ -424,23 +416,21 @@ async function getDataWC(
         throw new Error('MISSING_FIRST_SALE')
     }
 
-
     const lastSale = await abstractSaleRepo.findOne({
         where: {},
         select: { id: true },
         order: { id: "DESC" },
     });
 
-    if (!lastSale || !lastSale.id)         throw new Error('MISSING_FIRST_SALE')
-
+    if (!lastSale || !lastSale.id) throw new Error('MISSING_FIRST_SALE')
 
     const firstId = firstSale.id
     const lastId = lastSale.id
 
-    if (lastSale.id - firstSale.id <= 0) {
-        console.log("No hay filas para escanear ", lastSale.id - firstSale.id);
-                throw new Error('MISSING_ROWS')
+        console.log(`ANALYZING_SALES_ROWS_${lastSale.id}-${firstSale.id}=>${lastSale.id - firstSale.id}`);
 
+    if (lastSale.id - firstSale.id <= 0) {
+        throw new Error('MISSING_ROWS')
     }
 
     const chunksCount = (lastId - firstId) / chunkSize;
@@ -462,7 +452,6 @@ async function getDataWC(
 
             },
         });
-
 
         if (sales && sales.length) {
             for (const sale of sales) {
@@ -502,11 +491,11 @@ async function getDataWC(
     return { companies: Array.from(companiesSalesMap.values()), warehouses: Array.from(warehousesSalesMap.values()) }
 }
 
-
 export async function updateNotionData() {
 
     const nWarehouseMap = await getNotionWarehousesMap()
     const nCompaniesMap = await getNotionCompaniesMap()
+    const now = new Date()
 
     for (const csmNode of ['n1', 'n3', 'n4', 'n5']) {
         const datasource = getDatasource(csmNode);
@@ -524,33 +513,32 @@ export async function updateNotionData() {
             await updatePage(pageId, {
                 "Cantidad de ventas ultimo mes": {
                     "number": warehouseData.quantity
+                },
+                'Fecha ultima actualizacion': {
+                    date: { start: now.toISOString() },
                 }
             })
             await Bun.sleep(350)
-
-
         }
 
         for (const companyData of salesData.companies) {
-
 
             const pageId = nCompaniesMap.get(companyData.aclCode)
 
             if (!pageId) continue
             console.log(`UPDATING_${pageId}_${companyData.aclCode} => ${companyData.quantity}`);
 
-
             await updatePage(pageId, {
                 "Cantidad de ventas ultimo mes": {
                     "number": companyData.quantity
+                },
+                'ULT ACTUALIZACION': {
+                    date: { start: now.toISOString() },
                 }
             })
             await Bun.sleep(350)
         }
-
-
     }
-
 }
 
 type NotionProperty = Record<string, unknown>;
@@ -560,13 +548,9 @@ async function updatePage(
     pageId: string,
     properties: NotionProperties,
 ) {
-    if (!pageId.trim()) {
-        throw new Error("pageId es obligatorio para actualizar un cliente");
-    }
+    if (!pageId.trim())         throw new Error("MISSING_OR_INVALID_PAGE_ID");
 
     const body = JSON.stringify({ properties })
-    // console.log(body);
-
 
     const res = await fetch(`${NOTION_API_URL}/pages/${pageId}`, {
         method: 'PATCH',
@@ -583,7 +567,6 @@ async function updatePage(
     // console.log(res, resBody);
 
     return resBody
-
 }
 
 //  listWarehouses(
@@ -591,11 +574,12 @@ async function updatePage(
 //             5,
 //             null
 //         );
-//  listCompanies(
+//  const c = await listCompanies(
 //             {},
-//             5,
+//             2,
 //             null
 //         );
+// console.log(c.items[0].props);
 
 // await updatePage(
 //     '3de8f8ca-a2a8-8161-817b-dbe77c5c3eee',
@@ -608,10 +592,15 @@ async function updatePage(
 //             }
 //             ]
 //         }, "Cantidad de ventas ultimo mes": {
-//             "number": 0
+//             "number": 31
 //         }
 //     })
 // const w = await findWarehouseById('DES5234DAC - 9661')
 // console.log(transformPropsNotion(w.results[0]))
+
+
+
 // const w = await findWarehouseById('EMP5235HAQ - 11698')
 // console.log(w)
+// const w = await findWarehouseById('EMP1873LIV - 9002')
+// console.log(transformPropsNotion(w.results[0]))
