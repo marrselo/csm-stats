@@ -61,19 +61,6 @@ async function listWarehouses(
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
     console.log(`REQUESTING_WAREHOUSES_${pageSize}_${startCursor}`);
 
-    const filter: any = {
-    };
-    // const filter: any = {
-    //     and: [
-    //         {
-    //             property: 'Uso del sistema',
-    //             checkbox: {
-    //                 equals: true
-    //             }
-    //         }
-    //     ]
-    // };
-
     const requestBody: any = {
         page_size: pageSize
     };
@@ -83,7 +70,8 @@ async function listWarehouses(
     }
 
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`, {
+        const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
+        const res = await fetch(url, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -91,17 +79,18 @@ async function listWarehouses(
                 Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
                 'Notion-Version': DEFAULT_NOTION_VERSION
             }
-
         })
+
+        if (!res.ok) {
+            const errorBody = await res.text()
+            console.error('FETCH_ERROR', url, errorBody)
+            throw new Error('FETCH_ERROR')
+        }
 
         const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
         // console.log({ responseBody });
 
         return {
-            // items: responseBody.results,
-            // items: responseBody.results.map((i) =>
-            //     toCamelCase(transformRowNotion(i.properties))
-            // ),
             items: responseBody.results.map((i) =>
                 transformPropsNotion(i)
             ),
@@ -109,7 +98,7 @@ async function listWarehouses(
         };
     } catch (_error) {
         const error = _error as Error;
-        console.log(error);
+        console.error('LIST_WAREHOUSES_ERROR',error);
         throw error;
     }
 }
@@ -119,19 +108,6 @@ async function listCompanies(
     startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
     console.log(`REQUESTING_COMPANIES_${pageSize}_${startCursor}`);
-
-    const filter: any = {
-    };
-    // const filter: any = {
-    //     and: [
-    //         {
-    //             property: 'Uso del sistema',
-    //             checkbox: {
-    //                 equals: true
-    //             }
-    //         }
-    //     ]
-    // };
 
     const requestBody: any = {
         page_size: pageSize
@@ -145,7 +121,8 @@ async function listCompanies(
     const queryPropsSelected = propsSelected.map(propId => `filter_properties=${propId}`).join('&')
 
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`, {
+        const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`
+        const res = await fetch(url, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -153,11 +130,16 @@ async function listCompanies(
                 Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
                 'Notion-Version': DEFAULT_NOTION_VERSION
             }
-
         })
 
-        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
 
+        if (!res.ok) {
+            const errorBody = await res.text()
+            console.error('FETCH_ERROR', url, errorBody)
+            throw new Error('FETCH_ERROR')
+        }
+
+        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
 
         return {
             items: responseBody.results.map((i) =>
@@ -167,7 +149,7 @@ async function listCompanies(
         };
     } catch (_error) {
         const error = _error as Error;
-        console.log(error);
+        console.error('LIST_COMPANIES_ERROR',error);
         throw error;
     }
 }
@@ -198,7 +180,8 @@ async function findCompanyByAclCode(
     const queryPropsSelected = propsSelected.map(propId => `filter_properties=${propId}`).join('&')
 
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`, {
+        const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`
+        const res = await fetch(url, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -207,6 +190,14 @@ async function findCompanyByAclCode(
                 'Notion-Version': DEFAULT_NOTION_VERSION
             }
         })
+
+
+        if (!res.ok) {
+            const errorBody = await res.text()
+            console.error('FETCH_ERROR', url, errorBody)
+            throw new Error('FETCH_ERROR')
+        }
+
 
         const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
 
@@ -219,7 +210,7 @@ async function findCompanyByAclCode(
         };
     } catch (_error) {
         const error = _error as Error;
-        console.log(error);
+        console.error('FIND_COMPANY_BY_ACL_CODE_ERROR',error);
         throw error;
     }
 }
@@ -239,8 +230,9 @@ async function findWarehouseById(warehouseId: string) {
 
     });
     try {
-        const response = await fetch(
-            `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`,
+        const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
+        const res = await fetch(url
+            ,
             {
                 method: 'POST',
                 headers: {
@@ -252,19 +244,26 @@ async function findWarehouseById(warehouseId: string) {
             }
         );
 
-        const responseBody = await response.json();
+        if (!res.ok) {
+            const errorBody = await res.text()
+            console.error('FETCH_ERROR', url, errorBody)
+            throw new Error('FETCH_ERROR')
+        }
+
+        const responseBody = await res.json();
         return responseBody;
     } catch (_error) {
         const error = _error as Error;
-        console.log(error);
+        console.error('FIND_WAREHOUSE_BY_ID_ERROR',error);
         throw error;
     }
 }
 
 async function findRubros() {
     try {
+        const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}`
         const res = await fetch(
-            `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}`,
+            url,
             {
                 headers: {
                     Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
@@ -274,13 +273,20 @@ async function findRubros() {
             }
         );
 
+
+        if (!res.ok) {
+            const errorBody = await res.text()
+            console.error('FETCH_ERROR', url, errorBody)
+            throw new Error('FETCH_ERROR')
+        }
+
         const responseBody = await res.json() as unknown as { properties: any };
         // console.log(responseBody.properties);
 
         return responseBody.properties['NEGOCIO'].select.options;
     } catch (_error) {
         const error = _error as Error;
-        console.log(error);
+        console.error('FIND_RUBROS_ERROR',error);
         throw error;
     }
 }
@@ -428,7 +434,7 @@ async function getDataWC(
                 wsd.amount += Number(sale.amount)
                 wsd.quantity += 1
             }
-            
+
             const csd = companiesSalesMap.get(aclCode)
             if (!csd) continue
 
@@ -455,24 +461,42 @@ async function updatePage(
     pageId: string,
     properties: NotionProperties,
 ) {
-    if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
 
-    const body = JSON.stringify({ properties })
 
-    const res = await fetch(`${NOTION_API_URL}/pages/${pageId}`, {
-        method: 'PATCH',
-        body,
-        headers: {
-            Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            'Notion-Version': DEFAULT_NOTION_VERSION
+    try {
+
+        if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
+
+        const body = JSON.stringify({ properties })
+        const url = `${NOTION_API_URL}/pages/${pageId}`
+
+        const res = await fetch(url, {
+            method: 'PATCH',
+            body,
+            headers: {
+                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'Notion-Version': DEFAULT_NOTION_VERSION
+            }
+        })
+
+        if (!res.ok) {
+            const errorBody = await res.text()
+            console.error('FETCH_ERROR', url, errorBody)
+            throw new Error('FETCH_ERROR')
         }
-    })
 
-    const resBody = await res.json()
 
-    return resBody
+        const resBody = await res.json()
+
+        return resBody
+    } catch (_error) {
+        const error = _error as Error;
+        console.error('UPDATE_PAGE_ERROR', error);
+        throw error;
+    }
+
 }
 
 export async function updateNotionData() {
