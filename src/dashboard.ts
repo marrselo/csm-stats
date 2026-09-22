@@ -1,6 +1,6 @@
-import { AclCompany } from "./acl-company/acl-company.entity";
+import { AclCompany } from './acl-company/acl-company.entity'
 
-export const htmlDashboard = (aclCompany:AclCompany)=>`<!DOCTYPE html>
+export const htmlDashboard = (aclCompany: AclCompany) => `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />

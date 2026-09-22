@@ -1,67 +1,62 @@
-import { Hono } from "hono";
-import { HTTPException } from "hono/http-exception";
-import { ContentfulStatusCode } from "hono/utils/http-status";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
+import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
+import { ContentfulStatusCode } from 'hono/utils/http-status'
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY!
 
-export const proxyOpenaiController = new Hono();
+export const proxyOpenaiController = new Hono()
 
-proxyOpenaiController.post("/chat", async (c) => {
-  if (!OPENAI_API_KEY)
-    throw new HTTPException(400, { message: "OpenAI API Key not found" });
-  try {
-    const body = await c.req.json();
+proxyOpenaiController.post('/chat', async (c) => {
+	if (!OPENAI_API_KEY) throw new HTTPException(400, { message: 'OpenAI API Key not found' })
+	try {
+		const body = await c.req.json()
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
+		const response = await fetch('https://api.openai.com/v1/chat/completions', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${OPENAI_API_KEY}`
+			},
+			body: JSON.stringify(body)
+		})
 
-    const data = await response.json();
-    return c.json(data, response.status as ContentfulStatusCode);
-  } catch (error) {
-    console.error("ERROR CHAT OPENIA", error);
-    throw new HTTPException(400, { message: "Error al conectar con OpenAI" });
-  }
-});
+		const data = await response.json()
+		return c.json(data, response.status as ContentfulStatusCode)
+	} catch (error) {
+		console.error('ERROR CHAT OPENIA', error)
+		throw new HTTPException(400, { message: 'Error al conectar con OpenAI' })
+	}
+})
 
-proxyOpenaiController.post("/transcribe", async (c) => {
-  if (!OPENAI_API_KEY)
-    throw new HTTPException(400, { message: "OpenAI API Key not found" });
+proxyOpenaiController.post('/transcribe', async (c) => {
+	if (!OPENAI_API_KEY) throw new HTTPException(400, { message: 'OpenAI API Key not found' })
 
-  try {
-    const formData = await c.req.formData();
+	try {
+		const formData = await c.req.formData()
 
-    const file = formData.get("file") as File;
-    // const model = (formData.get('model') as string) || 'gpt-4o-mini-transcribe'
+		const file = formData.get('file') as File
+		// const model = (formData.get('model') as string) || 'gpt-4o-mini-transcribe'
 
-    if (!file) {
-      return c.json({ error: "File is required" }, 400);
-    }
+		if (!file) {
+			return c.json({ error: 'File is required' }, 400)
+		}
 
-    // Creamos nuevo FormData para reenviar a OpenAI
-    // const proxyForm = new FormData()
-    // proxyForm.append('file', file)
-    // proxyForm.append('model', model)
+		// Creamos nuevo FormData para reenviar a OpenAI
+		// const proxyForm = new FormData()
+		// proxyForm.append('file', file)
+		// proxyForm.append('model', model)
 
-    const response = await fetch(
-      "https://api.openai.com/v1/audio/transcriptions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: formData,
-      },
-    );
-    const data = await response.json();
+		const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${OPENAI_API_KEY}`
+			},
+			body: formData
+		})
+		const data = await response.json()
 
-    return c.json(data, response.status as ContentfulStatusCode);
-  } catch (error) {
-    console.error("ERROR TRANSCRIBE OPENIA", error);
-    throw new HTTPException(400, { message: "Error al conectar con OpenAI" });
-  }
-});
+		return c.json(data, response.status as ContentfulStatusCode)
+	} catch (error) {
+		console.error('ERROR TRANSCRIBE OPENIA', error)
+		throw new HTTPException(400, { message: 'Error al conectar con OpenAI' })
+	}
+})

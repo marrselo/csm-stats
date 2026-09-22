@@ -1,11 +1,21 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "strictPropertyInitialization": false,
-    "types": ["node"]
-  }
+	"compilerOptions": {
+		"strict": true,
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"strictPropertyInitialization": false,
+		"types": [
+			"node",
+			"bun"
+		]
+	},
+	"exclude": [
+		"node_modules/",
+		// "src/__tests__",
+		"dist",
+		"scripts",
+		"tests"
+	]
 }

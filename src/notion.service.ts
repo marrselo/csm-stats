@@ -1,562 +1,530 @@
-import { Between, MoreThanOrEqual, Repository } from "typeorm";
-import { AbstractSale } from "./abstract-sale/sale-abstract.entity";
-import { ComCompanies } from "./csm-company/csm-company.entity";
-import { getDatasource } from "./datasources";
+import { Between, Repository } from 'typeorm'
+import { AbstractSale } from './abstract-sale/sale-abstract.entity'
+import { ComCompanies } from './csm-company/csm-company.entity'
+import { getDatasource } from './datasources'
 
-const NOTION_ACCESS_TOKEN = process.env.NOTION_ACCESS_TOKEN;
-const NOTION_WAREHOUSES_DATABASE_ID = process.env.NOTION_WAREHOUSES_DATABASE_ID;
-const NOTION_CLIENTS_DATABASE_ID = process.env.NOTION_CLIENTS_DATABASE_ID;
-const NOTION_API_URL = "https://api.notion.com/v1";
-const DEFAULT_NOTION_VERSION = "2022-06-28";
+const NOTION_ACCESS_TOKEN = process.env.NOTION_ACCESS_TOKEN
+const NOTION_WAREHOUSES_DATABASE_ID = process.env.NOTION_WAREHOUSES_DATABASE_ID
+const NOTION_CLIENTS_DATABASE_ID = process.env.NOTION_CLIENTS_DATABASE_ID
+const NOTION_API_URL = 'https://api.notion.com/v1'
+const DEFAULT_NOTION_VERSION = '2022-06-28'
 
 function transformPropsNotion(row: Record<string, any>): Record<string, null | number | string> {
-    const war = {};
-    const properties = row.properties
-    for (const column in properties) {
-        const valueContent = properties[column][properties[column].type];
-        const columnType = properties[column].type;
+	const war = {}
+	const properties = row.properties
+	for (const column in properties) {
+		const valueContent = properties[column][properties[column].type]
+		const columnType = properties[column].type
 
-        if (valueContent === null || valueContent === undefined) {
-            war[column] = null;
-            continue;
-        }
+		if (valueContent === null || valueContent === undefined) {
+			war[column] = null
+			continue
+		}
 
-        if (columnType === 'rollup') {
-            // console.log(column,properties[column]);
-            if (!valueContent.array[0]) {
-                war[column] = null
-                continue
-            }
-            const typeRollup = valueContent.array[0].type
+		if (columnType === 'rollup') {
+			// console.log(column,properties[column]);
+			if (!valueContent.array[0]) {
+				war[column] = null
+				continue
+			}
+			const typeRollup = valueContent.array[0].type
 
-            war[column] = valueContent.array[0][typeRollup] ?? null;
-            continue;
-        }
-        if (columnType === 'formula') {
-            // console.log(column,properties[column]);
+			war[column] = valueContent.array[0][typeRollup] ?? null
+			continue
+		}
+		if (columnType === 'formula') {
+			// console.log(column,properties[column]);
 
-            const typeFormula = valueContent.type
+			const typeFormula = valueContent.type
 
-            war[column] = valueContent[typeFormula] ?? null;
-            continue;
-        }
-        if (Array.isArray(valueContent)) {
-            war[column] = valueContent.map((c) => c.plain_text).join('  ');
-            continue;
-        }
-        if (typeof valueContent === 'object') {
-            war[column] = valueContent.start ?? valueContent.name;
-            continue;
-        }
+			war[column] = valueContent[typeFormula] ?? null
+			continue
+		}
+		if (Array.isArray(valueContent)) {
+			war[column] = valueContent.map((c) => c.plain_text).join('  ')
+			continue
+		}
+		if (typeof valueContent === 'object') {
+			war[column] = valueContent.start ?? valueContent.name
+			continue
+		}
 
-        war[column] = properties[column][properties[column].type];
-    }
-    // console.log('ROW', JSON.stringify(row), war);
-    return { pageId: row.id, props: war } as any;
+		war[column] = properties[column][properties[column].type]
+	}
+	// console.log('ROW', JSON.stringify(row), war);
+	return { pageId: row.id, props: war } as any
 }
 
 async function listWarehouses(
-    pageSize: number,
-    startCursor?: string | null
+	pageSize: number,
+	startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
-    console.log(`REQUESTING_WAREHOUSES_${pageSize}_${startCursor}`);
+	console.log(`REQUESTING_WAREHOUSES_${pageSize}_${startCursor}`)
 
-    const requestBody: any = {
-        page_size: pageSize
-    };
+	const requestBody: any = {
+		page_size: pageSize
+	}
 
-    if (startCursor && startCursor?.trim() !== '') {
-        requestBody.start_cursor = startCursor;
-    }
+	if (startCursor && startCursor?.trim() !== '') {
+		requestBody.start_cursor = startCursor
+	}
 
-    try {
-        const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
-        const res = await fetch(url, {
-            body: JSON.stringify(requestBody),
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-                'Notion-Version': DEFAULT_NOTION_VERSION
-            }
-        })
+	try {
+		const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
+		const res = await fetch(url, {
+			body: JSON.stringify(requestBody),
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+				'Notion-Version': DEFAULT_NOTION_VERSION
+			}
+		})
 
-        if (!res.ok) {
-            const errorBody = await res.text()
-            console.error('FETCH_ERROR', url, errorBody)
-            throw new Error('FETCH_ERROR')
-        }
+		if (!res.ok) {
+			const errorBody = await res.text()
+			console.error('FETCH_ERROR', url, errorBody)
+			throw new Error('FETCH_ERROR')
+		}
 
-        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
-        // console.log({ responseBody });
+		const responseBody = (await res.json()) as unknown as { results: any[]; next_cursor: string }
+		// console.log({ responseBody });
 
-        return {
-            items: responseBody.results.map((i) =>
-                transformPropsNotion(i)
-            ),
-            nextCursor: responseBody.next_cursor
-        };
-    } catch (_error) {
-        const error = _error as Error;
-        console.error('LIST_WAREHOUSES_ERROR', error);
-        throw error;
-    }
+		return {
+			items: responseBody.results.map((i) => transformPropsNotion(i)),
+			nextCursor: responseBody.next_cursor
+		}
+	} catch (_error) {
+		const error = _error as Error
+		console.error('LIST_WAREHOUSES_ERROR', error)
+		throw error
+	}
 }
 
 async function listCompanies(
-    pageSize: number,
-    startCursor?: string | null
+	pageSize: number,
+	startCursor?: string | null
 ): Promise<{ items: any[]; nextCursor?: string | null }> {
-    console.log(`REQUESTING_COMPANIES_${pageSize}_${startCursor}`);
+	console.log(`REQUESTING_COMPANIES_${pageSize}_${startCursor}`)
 
-    const requestBody: any = {
-        page_size: pageSize
-    };
+	const requestBody: any = {
+		page_size: pageSize
+	}
 
-    if (startCursor && startCursor?.trim() !== '') {
-        requestBody.start_cursor = startCursor;
-    }
+	if (startCursor && startCursor?.trim() !== '') {
+		requestBody.start_cursor = startCursor
+	}
 
-    const propsSelected = ['%5Edo%5D', 'title']
-    const queryPropsSelected = propsSelected.map(propId => `filter_properties=${propId}`).join('&')
+	const propsSelected = ['%5Edo%5D', 'title']
+	const queryPropsSelected = propsSelected.map((propId) => `filter_properties=${propId}`).join('&')
 
-    try {
-        const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`
-        const res = await fetch(url, {
-            body: JSON.stringify(requestBody),
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-                'Notion-Version': DEFAULT_NOTION_VERSION
-            }
-        })
+	try {
+		const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`
+		const res = await fetch(url, {
+			body: JSON.stringify(requestBody),
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+				'Notion-Version': DEFAULT_NOTION_VERSION
+			}
+		})
 
+		if (!res.ok) {
+			const errorBody = await res.text()
+			console.error('FETCH_ERROR', url, errorBody)
+			throw new Error('FETCH_ERROR')
+		}
 
-        if (!res.ok) {
-            const errorBody = await res.text()
-            console.error('FETCH_ERROR', url, errorBody)
-            throw new Error('FETCH_ERROR')
-        }
+		const responseBody = (await res.json()) as unknown as { results: any[]; next_cursor: string }
 
-        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
-
-        return {
-            items: responseBody.results.map((i) =>
-                transformPropsNotion(i)
-            ),
-            nextCursor: responseBody.next_cursor
-        };
-    } catch (_error) {
-        const error = _error as Error;
-        console.error('LIST_COMPANIES_ERROR', error);
-        throw error;
-    }
+		return {
+			items: responseBody.results.map((i) => transformPropsNotion(i)),
+			nextCursor: responseBody.next_cursor
+		}
+	} catch (_error) {
+		const error = _error as Error
+		console.error('LIST_COMPANIES_ERROR', error)
+		throw error
+	}
 }
 
-async function findCompanyByAclCode(
-    aclCode: string,
-): Promise<{ items: any[]; nextCursor?: string | null }> {
-    console.log(`REQUESTING_COMPANIES_${aclCode}`);
+async function findCompanyByAclCode(aclCode: string): Promise<{ items: any[]; nextCursor?: string | null }> {
+	console.log(`REQUESTING_COMPANIES_${aclCode}`)
 
+	const filter: any = {
+		and: [
+			{
+				property: 'ACL',
+				rich_text: {
+					equals: String(aclCode)
+				}
+			}
+		]
+	}
 
-    const filter: any = {
-        and: [
-            {
-                property: 'ACL',
-                rich_text: {
-                    equals: String(aclCode)
-                }
-            }
-        ]
-    };
+	const requestBody: any = {
+		page_size: 2,
+		filter
+	}
 
-    const requestBody: any = {
-        page_size: 2,
-        filter
-    };
+	const propsSelected = ['%5Edo%5D', 'title', '%3FYJX', 'rO%3EV', '%3Ce%5Es']
+	const queryPropsSelected = propsSelected.map((propId) => `filter_properties=${propId}`).join('&')
 
-    const propsSelected = ['%5Edo%5D', 'title', '%3FYJX', 'rO%3EV', '%3Ce%5Es']
-    const queryPropsSelected = propsSelected.map(propId => `filter_properties=${propId}`).join('&')
+	try {
+		const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`
+		const res = await fetch(url, {
+			body: JSON.stringify(requestBody),
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+				'Notion-Version': DEFAULT_NOTION_VERSION
+			}
+		})
 
-    try {
-        const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`
-        const res = await fetch(url, {
-            body: JSON.stringify(requestBody),
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-                'Notion-Version': DEFAULT_NOTION_VERSION
-            }
-        })
+		if (!res.ok) {
+			const errorBody = await res.text()
+			console.error('FETCH_ERROR', url, errorBody)
+			throw new Error('FETCH_ERROR')
+		}
 
+		const responseBody = (await res.json()) as unknown as { results: any[]; next_cursor: string }
 
-        if (!res.ok) {
-            const errorBody = await res.text()
-            console.error('FETCH_ERROR', url, errorBody)
-            throw new Error('FETCH_ERROR')
-        }
-
-
-        const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
-
-
-        return {
-            items: responseBody.results.map((i) =>
-                transformPropsNotion(i)
-            ),
-            nextCursor: responseBody.next_cursor
-        };
-    } catch (_error) {
-        const error = _error as Error;
-        console.error('FIND_COMPANY_BY_ACL_CODE_ERROR', error);
-        throw error;
-    }
+		return {
+			items: responseBody.results.map((i) => transformPropsNotion(i)),
+			nextCursor: responseBody.next_cursor
+		}
+	} catch (_error) {
+		const error = _error as Error
+		console.error('FIND_COMPANY_BY_ACL_CODE_ERROR', error)
+		throw error
+	}
 }
 
 async function findWarehouseById(warehouseId: string) {
-    const bodyReq = JSON.stringify({
-        filter: {
-            and: [
-                {
-                    property: 'id Tienda',
-                    rich_text: {
-                        equals: String(warehouseId)
-                    }
-                }
-            ]
-        },
+	const bodyReq = JSON.stringify({
+		filter: {
+			and: [
+				{
+					property: 'id Tienda',
+					rich_text: {
+						equals: String(warehouseId)
+					}
+				}
+			]
+		}
+	})
+	try {
+		const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+				'Notion-Version': DEFAULT_NOTION_VERSION
+			},
+			body: bodyReq
+		})
 
-    });
-    try {
-        const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
-        const res = await fetch(url,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-                    'Notion-Version': DEFAULT_NOTION_VERSION
-                },
-                body: bodyReq
-            }
-        );
+		if (!res.ok) {
+			const errorBody = await res.text()
+			console.error('FETCH_ERROR', url, errorBody)
+			throw new Error('FETCH_ERROR')
+		}
 
-        if (!res.ok) {
-            const errorBody = await res.text()
-            console.error('FETCH_ERROR', url, errorBody)
-            throw new Error('FETCH_ERROR')
-        }
-
-        const responseBody = await res.json();
-        return responseBody;
-    } catch (_error) {
-        const error = _error as Error;
-        console.error('FIND_WAREHOUSE_BY_ID_ERROR', error);
-        throw error;
-    }
+		const responseBody = await res.json()
+		return responseBody
+	} catch (_error) {
+		const error = _error as Error
+		console.error('FIND_WAREHOUSE_BY_ID_ERROR', error)
+		throw error
+	}
 }
 
 async function findRubros() {
-    try {
-        const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}`
-        const res = await fetch(url,
-            {
-                headers: {
-                    Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-                    Accept: 'application/json',
-                    'Notion-Version': DEFAULT_NOTION_VERSION
-                }
-            }
-        );
+	try {
+		const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}`
+		const res = await fetch(url, {
+			headers: {
+				Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+				Accept: 'application/json',
+				'Notion-Version': DEFAULT_NOTION_VERSION
+			}
+		})
 
+		if (!res.ok) {
+			const errorBody = await res.text()
+			console.error('FETCH_ERROR', url, errorBody)
+			throw new Error('FETCH_ERROR')
+		}
 
-        if (!res.ok) {
-            const errorBody = await res.text()
-            console.error('FETCH_ERROR', url, errorBody)
-            throw new Error('FETCH_ERROR')
-        }
+		const responseBody = (await res.json()) as unknown as { properties: any }
+		// console.log(responseBody.properties);
 
-        const responseBody = await res.json() as unknown as { properties: any };
-        // console.log(responseBody.properties);
-
-        return responseBody.properties['NEGOCIO'].select.options;
-    } catch (_error) {
-        const error = _error as Error;
-        console.error('FIND_RUBROS_ERROR', error);
-        throw error;
-    }
+		return responseBody.properties['NEGOCIO'].select.options
+	} catch (_error) {
+		const error = _error as Error
+		console.error('FIND_RUBROS_ERROR', error)
+		throw error
+	}
 }
 
 async function getNotionWarehousesMap() {
-    const notionWarehousesMap = new Map()
-    const pageSize = 100;
-    let startCursor: string | undefined | null;
-    do {
-        const res = await listWarehouses(pageSize, startCursor);
+	const notionWarehousesMap = new Map()
+	const pageSize = 100
+	let startCursor: string | undefined | null
+	do {
+		const res = await listWarehouses(pageSize, startCursor)
 
-        const notionWarehouses = res.items;
-        startCursor = res.nextCursor;
+		const notionWarehouses = res.items
+		startCursor = res.nextCursor
 
-        for (const nw of notionWarehouses) {
-            notionWarehousesMap.set(nw.props['id Tienda'], nw.pageId)
-        }
-        await Bun.sleep(350)
+		for (const nw of notionWarehouses) {
+			notionWarehousesMap.set(nw.props['id Tienda'], nw.pageId)
+		}
+		await Bun.sleep(350)
+	} while (startCursor)
 
-    } while (startCursor);
-
-    return notionWarehousesMap
+	return notionWarehousesMap
 }
 
 async function getNotionCompaniesMap() {
+	const notionCompaniesMap = new Map()
 
-    const notionCompaniesMap = new Map()
+	const pageSize = 100
+	let startCursor: string | undefined | null
+	do {
+		const res = await listCompanies(pageSize, startCursor)
 
-    const pageSize = 100;
-    let startCursor: string | undefined | null;
-    do {
-        const res = await listCompanies(
-            pageSize,
-            startCursor
-        );
+		const notionCompanies = res.items
+		startCursor = res.nextCursor
 
-        const notionCompanies = res.items;
-        startCursor = res.nextCursor;
+		for (const nc of notionCompanies) {
+			notionCompaniesMap.set(nc.props['ACL'], nc.pageId)
+		}
+		await Bun.sleep(350)
+	} while (startCursor)
 
-        for (const nc of notionCompanies) {
-            notionCompaniesMap.set(nc.props['ACL'], nc.pageId)
-        }
-        await Bun.sleep(350)
-
-    } while (startCursor);
-
-    return notionCompaniesMap
+	return notionCompaniesMap
 }
 
-async function getDataWC(
-    abstractSaleRepo: Repository<AbstractSale>,
-    companiesRepo: Repository<ComCompanies>,
-) {
-    const today = new Date();
-    const limitDate = new Date()
-    limitDate.setDate(limitDate.getDate() - 30)
-    const limitDateTs = limitDate.getTime()
+async function getDataWC(abstractSaleRepo: Repository<AbstractSale>, companiesRepo: Repository<ComCompanies>) {
+	const limitDate = new Date()
+	limitDate.setDate(limitDate.getDate() - 30)
+	const limitDateTs = limitDate.getTime()
 
-    const companies = await companiesRepo.find({
-        select: {
-            id: true,
-            aclCode: true,
-            aclId: true
-        },
-    });
+	const companies = await companiesRepo.find({
+		select: {
+			id: true,
+			aclCode: true,
+			aclId: true
+		}
+	})
 
-    const companiesMap = new Map(companies.map(c => [c.aclId, c]))
+	const companiesMap = new Map(companies.map((c) => [c.aclId, c]))
 
-    const warehousesSalesMap: Map<string, { uid: string, amount: number, quantity: number, lastSaleTs: number }> = new Map()
-    const companiesSalesMap: Map<string, { aclCode: string, amount: number, quantity: number, lastSaleTs: number }> = new Map()
+	const warehousesSalesMap: Map<string, { uid: string; amount: number; quantity: number; lastSaleTs: number }> =
+		new Map()
+	const companiesSalesMap: Map<string, { aclCode: string; amount: number; quantity: number; lastSaleTs: number }> =
+		new Map()
 
-    const chunkSize = 50000
+	const chunkSize = 50000
 
-    const firstSale = await abstractSaleRepo.findOne({
-        where: {
-            // createdAt: MoreThanOrEqual(limitDate.getTime()),
-        },
-        select: { id: true },
-        order: { id: "ASC" },
-    });
+	const firstSale = await abstractSaleRepo.findOne({
+		where: {
+			// createdAt: MoreThanOrEqual(limitDate.getTime()),
+		},
+		select: { id: true },
+		order: { id: 'ASC' }
+	})
 
-    if (!firstSale || !firstSale.id) {
-        throw new Error('MISSING_FIRST_SALE')
-    }
+	if (!firstSale || !firstSale.id) {
+		throw new Error('MISSING_FIRST_SALE')
+	}
 
-    const lastSale = await abstractSaleRepo.findOne({
-        where: {},
-        select: { id: true },
-        order: { id: "DESC" },
-    });
+	const lastSale = await abstractSaleRepo.findOne({
+		where: {},
+		select: { id: true },
+		order: { id: 'DESC' }
+	})
 
-    if (!lastSale || !lastSale.id) throw new Error('MISSING_FIRST_SALE')
+	if (!lastSale || !lastSale.id) throw new Error('MISSING_FIRST_SALE')
 
-    const firstId = firstSale.id
-    const lastId = lastSale.id
+	const firstId = firstSale.id
+	const lastId = lastSale.id
 
-    console.log(`ANALYZING_SALES_ROWS_${lastSale.id}-${firstSale.id}=>${lastSale.id - firstSale.id}`);
+	console.log(`ANALYZING_SALES_ROWS_${lastSale.id}-${firstSale.id}=>${lastSale.id - firstSale.id}`)
 
-    if (lastSale.id - firstSale.id <= 0) {
-        throw new Error('MISSING_ROWS')
-    }
+	if (lastSale.id - firstSale.id <= 0) {
+		throw new Error('MISSING_ROWS')
+	}
 
-    const chunksCount = (lastId - firstId) / chunkSize;
+	const chunksCount = (lastId - firstId) / chunkSize
 
-    for (let i = 0; i <= chunksCount; i++) {
-        const fromId = i * chunkSize + firstId;
-        const toId =
-            Math.floor(chunksCount) === i
-                ? lastId
-                : i * chunkSize + chunkSize + firstId - 1;
-        console.log(`📥 Scanning rows ${fromId} - ${toId} `);
+	for (let i = 0; i <= chunksCount; i++) {
+		const fromId = i * chunkSize + firstId
+		const toId = Math.floor(chunksCount) === i ? lastId : i * chunkSize + chunkSize + firstId - 1
+		console.log(`📥 Scanning rows ${fromId} - ${toId} `)
 
-        const sales = await abstractSaleRepo.find({
-            where: { id: Between(fromId, toId) },
-            select: {
-                amount: true,
-                warehouseId: true,
-                aclId: true,
-                createdAt: true
-            },
-        });
+		const sales = await abstractSaleRepo.find({
+			where: { id: Between(fromId, toId) },
+			select: {
+				amount: true,
+				warehouseId: true,
+				aclId: true,
+				createdAt: true
+			}
+		})
 
-        if (!sales || !sales.length) continue
-        for (const sale of sales) {
-            if (!sale.aclId) continue
-            if (!sale.warehouseId) continue
+		if (!sales || !sales.length) continue
+		for (const sale of sales) {
+			if (!sale.aclId) continue
+			if (!sale.warehouseId) continue
 
-            const company = companiesMap.get(sale.aclId)
-            if (!company) continue
+			const company = companiesMap.get(sale.aclId)
+			if (!company) continue
 
-            const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
-            const aclCode = `${company.aclCode}`
-            if (!warehousesSalesMap.has(warehouseUid)) {
-                warehousesSalesMap.set(warehouseUid, { amount: 0, quantity: 0, uid: warehouseUid, lastSaleTs: 0 })
-            }
-            if (!companiesSalesMap.has(aclCode)) {
-                companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0, lastSaleTs: 0 })
-            }
+			const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
+			const aclCode = `${company.aclCode}`
+			if (!warehousesSalesMap.has(warehouseUid)) {
+				warehousesSalesMap.set(warehouseUid, {
+					amount: 0,
+					quantity: 0,
+					uid: warehouseUid,
+					lastSaleTs: 0
+				})
+			}
+			if (!companiesSalesMap.has(aclCode)) {
+				companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0, lastSaleTs: 0 })
+			}
 
-            const wsd = warehousesSalesMap.get(warehouseUid)
-            if (!wsd) continue
+			const wsd = warehousesSalesMap.get(warehouseUid)
+			if (!wsd) continue
 
-            wsd.lastSaleTs = Math.max(wsd.lastSaleTs, sale.createdAt)
-            if (sale.createdAt >= limitDateTs) {
-                wsd.amount += Number(sale.amount)
-                wsd.quantity += 1
-            }
+			wsd.lastSaleTs = Math.max(wsd.lastSaleTs, sale.createdAt)
+			if (sale.createdAt >= limitDateTs) {
+				wsd.amount += Number(sale.amount)
+				wsd.quantity += 1
+			}
 
-            const csd = companiesSalesMap.get(aclCode)
-            if (!csd) continue
+			const csd = companiesSalesMap.get(aclCode)
+			if (!csd) continue
 
-            csd.lastSaleTs = Math.max(csd.lastSaleTs, sale.createdAt)
-            if (sale.createdAt >= limitDateTs) {
-                csd.amount += Number(sale.amount)
-                csd.quantity += 1
-            }
-        }
+			csd.lastSaleTs = Math.max(csd.lastSaleTs, sale.createdAt)
+			if (sale.createdAt >= limitDateTs) {
+				csd.amount += Number(sale.amount)
+				csd.quantity += 1
+			}
+		}
 
-        console.log(
-            `📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`,
-        );
-        console.log(`DATETIME :${new Date().toISOString()}`);
-    }
+		console.log(`📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`)
+		console.log(`DATETIME :${new Date().toISOString()}`)
+	}
 
-    return { companies: Array.from(companiesSalesMap.values()), warehouses: Array.from(warehousesSalesMap.values()) }
+	return {
+		companies: Array.from(companiesSalesMap.values()),
+		warehouses: Array.from(warehousesSalesMap.values())
+	}
 }
 
-type NotionProperty = Record<string, unknown>;
-type NotionProperties = Record<string, NotionProperty>;
+type NotionProperty = Record<string, unknown>
+type NotionProperties = Record<string, NotionProperty>
 
-async function updatePage(
-    pageId: string,
-    properties: NotionProperties,
-) {
-    try {
+async function updatePage(pageId: string, properties: NotionProperties) {
+	try {
+		if (!pageId.trim()) throw new Error('MISSING_OR_INVALID_PAGE_ID')
 
-        if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
+		const body = JSON.stringify({ properties })
+		const url = `${NOTION_API_URL}/pages/${pageId}`
 
-        const body = JSON.stringify({ properties })
-        const url = `${NOTION_API_URL}/pages/${pageId}`
+		const res = await fetch(url, {
+			method: 'PATCH',
+			body,
+			headers: {
+				Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				'Notion-Version': DEFAULT_NOTION_VERSION
+			}
+		})
 
-        const res = await fetch(url, {
-            method: 'PATCH',
-            body,
-            headers: {
-                Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'Notion-Version': DEFAULT_NOTION_VERSION
-            }
-        })
+		if (!res.ok) {
+			const errorBody = await res.text()
+			console.error('FETCH_ERROR', url, errorBody)
+			throw new Error('FETCH_ERROR')
+		}
 
-        if (!res.ok) {
-            const errorBody = await res.text()
-            console.error('FETCH_ERROR', url, errorBody)
-            throw new Error('FETCH_ERROR')
-        }
+		const resBody = await res.json()
 
-
-        const resBody = await res.json()
-
-        return resBody
-    } catch (_error) {
-        const error = _error as Error;
-        console.error('UPDATE_PAGE_ERROR', error);
-        throw error;
-    }
-
+		return resBody
+	} catch (_error) {
+		const error = _error as Error
+		console.error('UPDATE_PAGE_ERROR', error)
+		throw error
+	}
 }
 
-export async function updateNotionData(csmNodes:string[]) {
+export async function updateNotionData(csmNodes: string[]) {
+	const nWarehouseMap = await getNotionWarehousesMap()
+	const nCompaniesMap = await getNotionCompaniesMap()
+	const now = new Date()
 
-    const nWarehouseMap = await getNotionWarehousesMap()
-    const nCompaniesMap = await getNotionCompaniesMap()
-    const now = new Date()
+	for (const csmNode of csmNodes) {
+		const datasource = getDatasource(csmNode)
+		const abstractSaleRepo = datasource.sales.getRepository(AbstractSale)
+		const csmCompanyRepo = datasource.sales.getRepository(ComCompanies)
 
-    for (const csmNode of csmNodes) {
-        const datasource = getDatasource(csmNode);
-        const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
-        const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);
+		const salesData = await getDataWC(abstractSaleRepo, csmCompanyRepo)
 
-        const salesData = await getDataWC(abstractSaleRepo, csmCompanyRepo)
+		for (const companyData of salesData.companies) {
+			const pageId = nCompaniesMap.get(companyData.aclCode)
 
-        for (const companyData of salesData.companies) {
+			if (!pageId) continue
+			console.log(`UPDATING_COMPANY_${pageId}_${companyData.aclCode} => ${companyData.quantity}`)
 
-            const pageId = nCompaniesMap.get(companyData.aclCode)
+			await updatePage(pageId, {
+				'Cantidad de ventas ultimo mes': {
+					number: companyData.quantity
+				},
+				'ULT ACTUALIZACION': {
+					date: { start: now.toISOString() }
+				},
+				'Fecha ultima consulta': {
+					date: { start: now.toISOString() }
+				},
+				'Fecha ultima venta': {
+					date: { start: new Date(companyData.lastSaleTs).toISOString() }
+				},
+				'Total venta ultimo mes': {
+					number: companyData.amount
+				}
+			})
+			await Bun.sleep(350)
+		}
 
-            if (!pageId) continue
-            console.log(`UPDATING_COMPANY_${pageId}_${companyData.aclCode} => ${companyData.quantity}`);
+		for (const warehouseData of salesData.warehouses) {
+			const pageId = nWarehouseMap.get(warehouseData.uid)
 
-            await updatePage(pageId, {
-                "Cantidad de ventas ultimo mes": {
-                    "number": companyData.quantity
-                },
-                'ULT ACTUALIZACION': {
-                    date: { start: now.toISOString() },
-                },
-                'Fecha ultima consulta': {
-                    date: { start: now.toISOString() },
-                },
-                "Fecha ultima venta": {
-                    "date": { start: new Date(companyData.lastSaleTs).toISOString() }
-                },
-                "Total venta ultimo mes": {
-                    "number": companyData.amount
-                },
-            })
-            await Bun.sleep(350)
-        }
+			if (!pageId) continue
+			console.log(`UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
 
-        for (const warehouseData of salesData.warehouses) {
-            const pageId = nWarehouseMap.get(warehouseData.uid)
+			await updatePage(pageId, {
+				'Cantidad de ventas ultimo mes': {
+					number: warehouseData.quantity
+				},
+				'Fecha ultima actualizacion': {
+					date: { start: now.toISOString() }
+				},
+				'Total venta ultimo mes': {
+					number: warehouseData.amount
+				}
+			})
+			await Bun.sleep(350)
+		}
+	}
 
-            if (!pageId) continue
-            console.log(`UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`);
-
-            await updatePage(pageId, {
-                "Cantidad de ventas ultimo mes": {
-                    "number": warehouseData.quantity
-                },
-                'Fecha ultima actualizacion': {
-                    date: { start: now.toISOString() },
-                },
-                "Total venta ultimo mes": {
-                    number: warehouseData.amount
-                }
-            })
-            await Bun.sleep(350)
-        }
-    }
-
-    // TODO: actualizar orders,purchases,skus
-    // TODO: eliminar companies y warehouses que ya no existen o crear las nuevas
-    // TODO: si no hay datos de un warehouse o company en el ultimo mes actualizar campos a 0
+	// TODO: actualizar orders,purchases,skus
+	// TODO: eliminar companies y warehouses que ya no existen o crear las nuevas
+	// TODO: si no hay datos de un warehouse o company en el ultimo mes actualizar campos a 0
 }

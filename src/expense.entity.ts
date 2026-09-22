@@ -1,11 +1,4 @@
-import {
-	Entity,
-	PrimaryGeneratedColumn,
-	Column,
-	CreateDateColumn,
-	UpdateDateColumn,
-	DeleteDateColumn,
-} from 'typeorm'
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm'
 import { DecimalTransformer } from './typeorm-transformers/decimal-transaformer'
 
 export interface Flag {
@@ -27,14 +20,14 @@ export enum ExpensePeriod {
 	NONE = 'none',
 	WEEKLY = 'weekly',
 	BIWEEKLY = 'biweekly',
-	MONTHLY = 'monthly',
+	MONTHLY = 'monthly'
 	// YEARLY = 'yearly',
 }
 
 export enum ExpenseType {
 	FIXED = 'fixed',
 	VARIABLE = 'variable',
-	UNIQUE = 'unique',
+	UNIQUE = 'unique'
 }
 
 @Entity('expense', { comment: 'Almacena los gastos de las compañias' })
@@ -54,21 +47,20 @@ export class ExpenseEntity {
 	@Column('int', {
 		name: 'current_status_id',
 		nullable: true,
-		comment: 'id del estado actual del gasto',
+		comment: 'id del estado actual del gasto'
 	})
 	currentStatusId?: number | null
 
 	@Column('int', {
 		name: 'transaction_id',
 		nullable: true,
-		comment:
-			'id de la transacción asociada al ejecutar el gasto (egreso de caja)',
+		comment: 'id de la transacción asociada al ejecutar el gasto (egreso de caja)'
 	})
 	transactionId?: number | null
 
 	@Column('int', {
 		name: 'company_id',
-		comment: 'Id de la compañía que creó el gasto',
+		comment: 'Id de la compañía que creó el gasto'
 	})
 	companyId: number
 
@@ -78,15 +70,14 @@ export class ExpenseEntity {
 	@Column('varchar', {
 		name: 'sales_expense_type_code',
 		nullable: true,
-		comment:
-			'código de referencia para el servicio de sales-purchases, es necesario para generar una transacción',
-		length: 255,
+		comment: 'código de referencia para el servicio de sales-purchases, es necesario para generar una transacción',
+		length: 255
 	})
 	salesExpenseTypeCode?: string | null
 
 	@Column('datetime', {
 		name: 'period_date',
-		comment: 'período del gasto (mensual, semanal, anual, etc)',
+		comment: 'período del gasto (mensual, semanal, anual, etc)'
 	})
 	periodDate: Date
 
@@ -103,28 +94,28 @@ export class ExpenseEntity {
 		type: 'datetime',
 
 		name: 'created_at',
-		default: () => "'CURRENT_TIMESTAMP(6)'",
+		default: () => "'CURRENT_TIMESTAMP(6)'"
 	})
 	createdAt?: Date
 
 	@UpdateDateColumn({
 		type: 'datetime',
 		name: 'updated_at',
-		default: () => "'CURRENT_TIMESTAMP(6)'",
+		default: () => "'CURRENT_TIMESTAMP(6)'"
 	})
 	updatedAt?: Date
 
 	@DeleteDateColumn({
 		type: 'datetime',
 		name: 'deleted_at',
-		nullable: true,
+		nullable: true
 	})
 	deletedAt?: Date | null
 
 	@Column('varchar', {
 		name: 'created_by',
 		comment: 'email del empleado que creo el gasto',
-		length: 255,
+		length: 255
 	})
 	createdBy: string
 
@@ -137,14 +128,14 @@ export class ExpenseEntity {
 	@Column('enum', {
 		name: 'period',
 		nullable: true,
-		enum: ExpensePeriod,
+		enum: ExpensePeriod
 	})
 	period?: ExpensePeriod | null
 
 	@Column('varchar', {
 		name: 'currency_code',
 		comment: 'codigo de la moneda',
-		length: 255,
+		length: 255
 	})
 	currencyCode: string
 
@@ -165,7 +156,7 @@ export class ExpenseEntity {
 		comment: 'monto total monetario del gasto',
 		precision: 10,
 		scale: 2,
-		transformer: new DecimalTransformer(),
+		transformer: new DecimalTransformer()
 	})
 	mount: number
 
@@ -183,6 +174,4 @@ export class ExpenseEntity {
 
 	@Column({ type: 'json', name: 'accounting_account', nullable: true })
 	accountingAccount?: AccountingAccount[]
-
-	
 }
