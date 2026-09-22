@@ -141,8 +141,11 @@ async function listCompanies(
         requestBody.start_cursor = startCursor;
     }
 
+    const propsSelected = ['%5Edo%5D', 'title']
+    const queryPropsSelected = propsSelected.map(propId => `filter_properties=${propId}`).join('&')
+
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?filter_properties=%5Edo%5D&filter_properties=title`, {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -179,9 +182,9 @@ async function findCompanyByAclCode(
         and: [
             {
                 property: 'ACL',
-               rich_text: {
-                        equals: String(aclCode)
-                    }
+                rich_text: {
+                    equals: String(aclCode)
+                }
             }
         ]
     };
@@ -191,8 +194,11 @@ async function findCompanyByAclCode(
         filter
     };
 
+    const propsSelected = ['%5Edo%5D', 'title', '%3FYJX', 'rO%3EV', '%3Ce%5Es']
+    const queryPropsSelected = propsSelected.map(propId => `filter_properties=${propId}`).join('&')
+
     try {
-        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?filter_properties=%5Edo%5D&filter_properties=title&filter_properties=%3FYJX&filter_properties=rO%3EV&filter_properties=%3Ce%5Es`, {
+        const res = await fetch(`${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}/query?${queryPropsSelected}`, {
             body: JSON.stringify(requestBody),
             method: 'POST',
             headers: {
@@ -200,7 +206,6 @@ async function findCompanyByAclCode(
                 Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
                 'Notion-Version': DEFAULT_NOTION_VERSION
             }
-
         })
 
         const responseBody = await res.json() as unknown as { results: any[]; next_cursor: string };
@@ -281,16 +286,11 @@ async function findRubros() {
 }
 
 async function getNotionWarehousesMap() {
-
     const notionWarehousesMap = new Map()
-
     const pageSize = 100;
     let startCursor: string | undefined | null;
     do {
-        const res = await listWarehouses(
-            pageSize,
-            startCursor
-        );
+        const res = await listWarehouses(pageSize, startCursor);
 
         const notionWarehouses = res.items;
         startCursor = res.nextCursor;
@@ -337,6 +337,7 @@ async function getDataWC(
     const today = new Date();
     const limitDate = new Date()
     limitDate.setDate(limitDate.getDate() - 30)
+    const limitDateTs = limitDate.getTime()
 
     const companies = await companiesRepo.find({
         select: {
@@ -355,7 +356,7 @@ async function getDataWC(
 
     const firstSale = await abstractSaleRepo.findOne({
         where: {
-            createdAt: MoreThanOrEqual(limitDate.getTime()),
+            // createdAt: MoreThanOrEqual(limitDate.getTime()),
         },
         select: { id: true },
         order: { id: "ASC" },
@@ -399,49 +400,79 @@ async function getDataWC(
                 warehouseId: true,
                 aclId: true,
                 createdAt: true
-
             },
         });
 
-        if (sales && sales.length) {
-            for (const sale of sales) {
-                if (!sale.aclId) continue
-                if (!sale.warehouseId) continue
+        if (!sales || !sales.length) continue
+        for (const sale of sales) {
+            if (!sale.aclId) continue
+            if (!sale.warehouseId) continue
 
-                const company = companiesMap.get(sale.aclId)
-                if (!company) continue
+            const company = companiesMap.get(sale.aclId)
+            if (!company) continue
 
-                const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
-                const aclCode = `${company.aclCode}`
-                if (!warehousesSalesMap.has(warehouseUid)) {
-                    warehousesSalesMap.set(warehouseUid, { amount: 0, quantity: 0, uid: warehouseUid, lastSaleTs: 0 })
-                }
-                if (!companiesSalesMap.has(aclCode)) {
-                    companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0, lastSaleTs: 0 })
-                }
-
-                const wsd = warehousesSalesMap.get(warehouseUid)
-                if (!wsd) continue
-                wsd.amount += Number(sale.amount)
-                wsd.quantity += 1
-                wsd.lastSaleTs = Math.max(wsd.lastSaleTs, sale.createdAt)
-
-                const csd = companiesSalesMap.get(aclCode)
-                if (!csd) continue
-                csd.amount += Number(sale.amount)
-                csd.quantity += 1
-                csd.lastSaleTs = Math.max(csd.lastSaleTs, sale.createdAt)
-
+            const warehouseUid = `${company.aclCode} - ${sale.warehouseId}`
+            const aclCode = `${company.aclCode}`
+            if (!warehousesSalesMap.has(warehouseUid)) {
+                warehousesSalesMap.set(warehouseUid, { amount: 0, quantity: 0, uid: warehouseUid, lastSaleTs: 0 })
+            }
+            if (!companiesSalesMap.has(aclCode)) {
+                companiesSalesMap.set(aclCode, { aclCode, amount: 0, quantity: 0, lastSaleTs: 0 })
             }
 
-            console.log(
-                `📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`,
-            );
+            const wsd = warehousesSalesMap.get(warehouseUid)
+            if (!wsd) continue
+
+            wsd.lastSaleTs = Math.max(wsd.lastSaleTs, sale.createdAt)
+            if (sale.createdAt >= limitDateTs) {
+                wsd.amount += Number(sale.amount)
+                wsd.quantity += 1
+            }
+            
+            const csd = companiesSalesMap.get(aclCode)
+            if (!csd) continue
+
+            csd.lastSaleTs = Math.max(csd.lastSaleTs, sale.createdAt)
+            if (sale.createdAt >= limitDateTs) {
+                csd.amount += Number(sale.amount)
+                csd.quantity += 1
+            }
         }
+
+        console.log(
+            `📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`,
+        );
         console.log(`DATETIME :${new Date().toISOString()}`);
     }
 
     return { companies: Array.from(companiesSalesMap.values()), warehouses: Array.from(warehousesSalesMap.values()) }
+}
+
+type NotionProperty = Record<string, unknown>;
+type NotionProperties = Record<string, NotionProperty>;
+
+async function updatePage(
+    pageId: string,
+    properties: NotionProperties,
+) {
+    if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
+
+    const body = JSON.stringify({ properties })
+
+    const res = await fetch(`${NOTION_API_URL}/pages/${pageId}`, {
+        method: 'PATCH',
+        body,
+        headers: {
+            Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'Notion-Version': DEFAULT_NOTION_VERSION
+        }
+    })
+
+    const resBody = await res.json()
+
+    return resBody
 }
 
 export async function updateNotionData() {
@@ -475,7 +506,7 @@ export async function updateNotionData() {
                     date: { start: now.toISOString() },
                 },
                 "Fecha ultima venta": {
-                    "date":{start: new Date(companyData.lastSaleTs).toISOString() }
+                    "date": { start: new Date(companyData.lastSaleTs).toISOString() }
                 },
                 "Total venta ultimo mes": {
                     "number": companyData.amount
@@ -503,34 +534,9 @@ export async function updateNotionData() {
             })
             await Bun.sleep(350)
         }
-
-
     }
-}
 
-type NotionProperty = Record<string, unknown>;
-type NotionProperties = Record<string, NotionProperty>;
-
-async function updatePage(
-    pageId: string,
-    properties: NotionProperties,
-) {
-    if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
-
-    const body = JSON.stringify({ properties })
-
-    const res = await fetch(`${NOTION_API_URL}/pages/${pageId}`, {
-        method: 'PATCH',
-        body,
-        headers: {
-            Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            'Notion-Version': DEFAULT_NOTION_VERSION
-        }
-    })
-
-    const resBody = await res.json()
-
-    return resBody
+    // TODO: actualizar orders,purchases,skus
+    // TODO: eliminar companies y warehouses que ya no existen o crear las nuevas
+    // TODO: si no hay datos de un warehouse o company en el ultimo mes actualizar campos a 0
 }
