@@ -98,7 +98,7 @@ async function listWarehouses(
         };
     } catch (_error) {
         const error = _error as Error;
-        console.error('LIST_WAREHOUSES_ERROR',error);
+        console.error('LIST_WAREHOUSES_ERROR', error);
         throw error;
     }
 }
@@ -149,7 +149,7 @@ async function listCompanies(
         };
     } catch (_error) {
         const error = _error as Error;
-        console.error('LIST_COMPANIES_ERROR',error);
+        console.error('LIST_COMPANIES_ERROR', error);
         throw error;
     }
 }
@@ -210,7 +210,7 @@ async function findCompanyByAclCode(
         };
     } catch (_error) {
         const error = _error as Error;
-        console.error('FIND_COMPANY_BY_ACL_CODE_ERROR',error);
+        console.error('FIND_COMPANY_BY_ACL_CODE_ERROR', error);
         throw error;
     }
 }
@@ -231,8 +231,7 @@ async function findWarehouseById(warehouseId: string) {
     });
     try {
         const url = `${NOTION_API_URL}/databases/${NOTION_WAREHOUSES_DATABASE_ID}/query?filter_properties=tVcw&filter_properties=title`
-        const res = await fetch(url
-            ,
+        const res = await fetch(url,
             {
                 method: 'POST',
                 headers: {
@@ -254,7 +253,7 @@ async function findWarehouseById(warehouseId: string) {
         return responseBody;
     } catch (_error) {
         const error = _error as Error;
-        console.error('FIND_WAREHOUSE_BY_ID_ERROR',error);
+        console.error('FIND_WAREHOUSE_BY_ID_ERROR', error);
         throw error;
     }
 }
@@ -262,8 +261,7 @@ async function findWarehouseById(warehouseId: string) {
 async function findRubros() {
     try {
         const url = `${NOTION_API_URL}/databases/${NOTION_CLIENTS_DATABASE_ID}`
-        const res = await fetch(
-            url,
+        const res = await fetch(url,
             {
                 headers: {
                     Authorization: `Bearer ${NOTION_ACCESS_TOKEN}`,
@@ -286,7 +284,7 @@ async function findRubros() {
         return responseBody.properties['NEGOCIO'].select.options;
     } catch (_error) {
         const error = _error as Error;
-        console.error('FIND_RUBROS_ERROR',error);
+        console.error('FIND_RUBROS_ERROR', error);
         throw error;
     }
 }
@@ -461,8 +459,6 @@ async function updatePage(
     pageId: string,
     properties: NotionProperties,
 ) {
-
-
     try {
 
         if (!pageId.trim()) throw new Error("MISSING_OR_INVALID_PAGE_ID");
@@ -499,13 +495,13 @@ async function updatePage(
 
 }
 
-export async function updateNotionData() {
+export async function updateNotionData(csmNodes:string[]) {
 
     const nWarehouseMap = await getNotionWarehousesMap()
     const nCompaniesMap = await getNotionCompaniesMap()
     const now = new Date()
 
-    for (const csmNode of ['n1', 'n3', 'n4', 'n5']) {
+    for (const csmNode of csmNodes) {
         const datasource = getDatasource(csmNode);
         const abstractSaleRepo = datasource.sales.getRepository(AbstractSale);
         const csmCompanyRepo = datasource.sales.getRepository(ComCompanies);

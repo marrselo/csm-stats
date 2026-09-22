@@ -419,7 +419,6 @@ export async function getAbstractData(
 
 }
 
-
 export async function getAbstractSales(
     aclCompany: AclCompany,
     salDocsRepo: Repository<AbstractSale>,
@@ -626,7 +625,6 @@ export async function getAbstractCashClosings(
 
 }
 
-
 export async function getAbstractExpense(
     aclCompany: AclCompany,
     expensesRepo: Repository<ExpenseEntity>,
@@ -686,8 +684,6 @@ export async function getAbstractExpense(
     return Object.values(abstractData)
 }
 
-
-
 export async function getAbstractSkusSales(
     warehousesUids: string[],
 ) {
@@ -709,7 +705,6 @@ export async function getAbstractSkusSales(
     return Object.values(abstractData)
 
 }
-
 
 export async function getAbstractSkusPurchases(
     purchaseDetailsRepo: Repository<PurDocumentsDetails>,

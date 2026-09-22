@@ -451,7 +451,7 @@ export class SalOrders {
     nullable: true,
     comment: "Campo para filtros equivalente de created_at",
   })
-  createdAtNumber: string | null;
+  createdAtNumber: number | null;
 
   @Column("timestamp", {
     name: "creation_generated_at",

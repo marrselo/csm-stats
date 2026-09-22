@@ -62,6 +62,8 @@ function getMonthName(date: Date, locale: string = "es-ES"): string {
   return date.toLocaleString(locale, { month: "long" });
 }
 
+type SheetCellValue = (string | null | undefined | number)
+
 interface AbstractMonthData {
   month_name: string;
   month_number: number;
@@ -751,8 +753,6 @@ app.get("warehouses", async (c) => {
   return c.json(allWarehouses);
 });
 
-
-
 interface AbstractDateData {
   date: string;
   sales: {
@@ -872,7 +872,7 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
 
 
   if (c.req.query('format') === 'csv') {
-    const finalData = [
+    const finalData: SheetCellValue[][] = [
       ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count', 'purchases_amount', 'purchases_count', 'cash_closings_amount', 'cash_closings_count', 'orders_amount', 'orders_count']
     ]
     for (const date in abstractData) {
@@ -934,8 +934,6 @@ app.get("abstract-by-dates/acl-code/:aclCode", async (c) => {
   return c.json({ terminals, warehouses, subsidiaries, abstractData: finalData, skusCount });
 
 });
-
-
 
 app.get("abstract/dates/acl-code/:aclCode", async (c) => {
   const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
@@ -1037,7 +1035,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
 
   if (c.req.query('format') === 'csv') {
-    const salesArrayCsv = [
+    const salesArrayCsv: SheetCellValue[][] = [
       ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count']
     ]
     for (const abstract of abstractSales) {
@@ -1058,7 +1056,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     const salesCsv = (salesArrayCsv.map(l => l.join(',')).join('\n'))
 
 
-    const purchasesArrayCsv = [
+    const purchasesArrayCsv: SheetCellValue[][] = [
       ['date', 'purchases_amount', 'purchases_count']
     ]
     for (const abstract of abstractPurchases) {
@@ -1072,7 +1070,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     }
     const purchasesCsv = (purchasesArrayCsv.map(l => l.join(',')).join('\n'))
 
-    const cashClosingsArrayCsv = [
+    const cashClosingsArrayCsv: SheetCellValue[][] = [
       ['date', 'terminal_id', 'cash_closings_amount', 'cash_closings_count']
     ]
     for (const abstract of abstractCashClosings) {
@@ -1089,7 +1087,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
 
 
-    const expensesArrayCsv = [
+    const expensesArrayCsv: SheetCellValue[][] = [
       ['date', 'expenses_amount', 'expenses_count']
     ]
     for (const abstract of abstractExpenses) {
@@ -1104,7 +1102,7 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
     const expensesCsv = (expensesArrayCsv.map(l => l.join(',')).join('\n'))
 
 
-    const skusSalesArrayCsv = [
+    const skusSalesArrayCsv: SheetCellValue[][] = [
       ['date', 'skus_amount', 'skus_count']
     ]
     for (const abstract of abstractSkusSales) {
@@ -1183,11 +1181,6 @@ app.get("abstract/dates/acl-code/:aclCode", async (c) => {
 
 
 
-
-
-
-
-
 app.get("abstract/sales/acl-code/:aclCode", async (c) => {
   const aclCompanyRepo = aclDataSource.getRepository(AclCompany);
   const aclTemplateRepo = aclDataSource.getRepository(AclTemplate);
@@ -1260,7 +1253,7 @@ app.get("abstract/sales/acl-code/:aclCode", async (c) => {
 
 
   if (c.req.query('format') === 'csv') {
-    const salesArrayCsv = [
+    const salesArrayCsv: SheetCellValue[][] = [
       ['warehouse_id', 'warehouse_name', 'terminal_id', 'terminal_name', 'date', 'sales_amount', 'sales_count']
     ]
     for (const abstract of abstractSales) {
@@ -1346,7 +1339,7 @@ app.get("abstract/purchases/acl-code/:aclCode", async (c) => {
   );
   if (c.req.query('format') === 'csv') {
 
-    const purchasesArrayCsv = [
+    const purchasesArrayCsv: SheetCellValue[][] = [
       ['date', 'purchases_amount', 'purchases_count']
     ]
     for (const abstract of abstractPurchases) {
@@ -1429,7 +1422,7 @@ app.get("abstract/cash-closings/acl-code/:aclCode", async (c) => {
 
   if (c.req.query('format') === 'csv') {
 
-    const cashClosingsArrayCsv = [
+    const cashClosingsArrayCsv: SheetCellValue[][] = [
       ['date', 'cash_closings_amount', 'cash_closings_count']
     ]
     for (const abstract of abstractCashClosings) {
@@ -1510,7 +1503,7 @@ app.get("abstract/expenses/acl-code/:aclCode", async (c) => {
 
 
 
-    const expensesArrayCsv = [
+    const expensesArrayCsv: SheetCellValue[][] = [
       ['date', 'expenses_amount', 'expenses_count']
     ]
     for (const abstract of abstractExpenses) {
@@ -1630,15 +1623,18 @@ app.get('/dashboard/:aclCode', async (c) => {
 })
 
 app.post('/update-notion', async (c) => {
+  const body = await c.req.json();
 
-  updateNotionData().then(d=>{
+  const csmNodes =
+    body["csmNodes"] && Array.isArray(body["csmNodes"])
+      ? body["csmNodes"]
+      : ["n1", "n3", "n4", "n5"];
+  updateNotionData(csmNodes).then(d => {
     console.log('FINISH_UPDATE_NOTION')
-  }).catch(err=>{
-    console.error('ERROR_UPDATE_NOTION',err)
+  }).catch(err => {
+    console.error('ERROR_UPDATE_NOTION', err)
   })
-  
-
-  return c.json({status:'ok'})
+  return c.json({ status: 'ok' })
 })
 
 
