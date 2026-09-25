@@ -1,7 +1,8 @@
-import { Between, Repository } from 'typeorm'
+import { Between, MoreThanOrEqual, Repository } from 'typeorm'
 import { AbstractSale } from './abstract-sale/sale-abstract.entity'
 import { ComCompanies } from './csm-company/csm-company.entity'
 import { getDatasource } from './datasources'
+import { groupByNodes } from './acl-companies.service'
 
 const NOTION_ACCESS_TOKEN = process.env.NOTION_ACCESS_TOKEN
 const NOTION_WAREHOUSES_DATABASE_ID = process.env.NOTION_WAREHOUSES_DATABASE_ID
@@ -333,7 +334,7 @@ async function getDataWC(abstractSaleRepo: Repository<AbstractSale>, companiesRe
 
 	const firstSale = await abstractSaleRepo.findOne({
 		where: {
-			// createdAt: MoreThanOrEqual(limitDate.getTime()),
+			createdAt: MoreThanOrEqual(limitDate.getTime()),
 		},
 		select: { id: true },
 		order: { id: 'ASC' }
@@ -365,7 +366,6 @@ async function getDataWC(abstractSaleRepo: Repository<AbstractSale>, companiesRe
 	for (let i = 0; i <= chunksCount; i++) {
 		const fromId = i * chunkSize + firstId
 		const toId = Math.floor(chunksCount) === i ? lastId : i * chunkSize + chunkSize + firstId - 1
-		console.log(`📥 Scanning rows ${fromId} - ${toId} `)
 
 		const sales = await abstractSaleRepo.find({
 			where: { id: Between(fromId, toId) },
@@ -417,13 +417,14 @@ async function getDataWC(abstractSaleRepo: Repository<AbstractSale>, companiesRe
 				csd.quantity += 1
 			}
 		}
-
-		console.log(`📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`)
-		console.log(`DATETIME :${new Date().toISOString()}`)
+		console.log(`[${new Date().toISOString()}] 📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`)
 	}
 
+	console.log(`[${new Date().toISOString()}] NOTION_UPDATER:data_sizes COMPANIES:${companiesSalesMap.size} WAREHOUSES:${warehousesSalesMap.size}`)
+
+
 	return {
-		companies: Array.from(companiesSalesMap.values()),
+		companies: companiesSalesMap,
 		warehouses: Array.from(warehousesSalesMap.values())
 	}
 }
@@ -470,6 +471,7 @@ export async function updateNotionData(csmNodes: string[]) {
 	const nCompaniesMap = await getNotionCompaniesMap()
 	const now = new Date()
 
+	const aclCompanies = await groupByNodes(['n1', 'n3', 'n4', 'n5'])
 	for (const csmNode of csmNodes) {
 		const datasource = getDatasource(csmNode)
 		const abstractSaleRepo = datasource.sales.getRepository(AbstractSale)
@@ -477,11 +479,20 @@ export async function updateNotionData(csmNodes: string[]) {
 
 		const salesData = await getDataWC(abstractSaleRepo, csmCompanyRepo)
 
-		for (const companyData of salesData.companies) {
-			const pageId = nCompaniesMap.get(companyData.aclCode)
-
-			if (!pageId) continue
-			console.log(`UPDATING_COMPANY_${pageId}_${companyData.aclCode} => ${companyData.quantity}`)
+		const nodeCompanies = aclCompanies[csmNode]
+		if (!nodeCompanies) {
+			console.log(`MISISNG_ACL_COMPANIES_NODE_${csmNode}`)
+			continue
+		}
+		for (const aclCompany of nodeCompanies) {
+			const pageId = nCompaniesMap.get(aclCompany.code)
+			const companyData = salesData.companies.get(aclCompany.code)
+			if (!companyData) continue
+			if (!pageId) {
+				console.log(`NOTION_UPDATER:company_notion_not_exist ${aclCompany.code} - ${aclCompany.name}`)
+				continue
+			}
+			console.log(`NOTION_UPDATER:UPDATING_COMPANY_${pageId}_${aclCompany.code} => ${companyData.quantity}`)
 
 			await updatePage(pageId, {
 				'Cantidad de ventas ultimo mes': {
@@ -500,14 +511,14 @@ export async function updateNotionData(csmNodes: string[]) {
 					number: companyData.amount
 				}
 			})
-			await Bun.sleep(350)
+			await Bun.sleep(330)
 		}
 
 		for (const warehouseData of salesData.warehouses) {
 			const pageId = nWarehouseMap.get(warehouseData.uid)
 
 			if (!pageId) continue
-			console.log(`UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
+			console.log(`NOTION_UPDATER:UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
 
 			await updatePage(pageId, {
 				'Cantidad de ventas ultimo mes': {
@@ -520,7 +531,7 @@ export async function updateNotionData(csmNodes: string[]) {
 					number: warehouseData.amount
 				}
 			})
-			await Bun.sleep(350)
+			await Bun.sleep(330)
 		}
 	}
 

@@ -379,7 +379,7 @@ app.get('abstract/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -518,7 +518,7 @@ app.get('abstract/acl-code/:aclCode', async (c) => {
 	const response: AbstractResponse = {
 		csm_node: csmNode,
 		acl_id: aclCompany?.id,
-		acl_code: aclCompany?.codeCompany,
+		acl_code: aclCompany?.code,
 		company_id: csmCompany?.id,
 		first_sale_date: firstSale?.createdAt ? new Date(firstSale?.createdAt) : null,
 		last_sale_date: lastSale?.createdAt ? new Date(lastSale?.createdAt) : null,
@@ -545,7 +545,7 @@ app.get('abstract-company/acl-code/:aclCode', async (c) => {
 	const aclCompanyRepo = aclDataSource.getRepository(AclCompany)
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: c.req.param().aclCode
+		code: c.req.param().aclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: 'ACL Company not found' }, 404)
@@ -569,11 +569,11 @@ app.get('abstract-company/acl-code/:aclCode', async (c) => {
 	return c.json({
 		csm_node: nodeName,
 		acl_id: aclCompany?.id,
-		acl_code: aclCompany?.codeCompany,
+		acl_code: aclCompany?.code,
 		acl_template: aclTemplate?.name,
 		company_id: csmCompany?.id,
 		company_ruc: aclCompany?.ruc,
-		company_name: aclCompany?.nombreComercial,
+		company_name: aclCompany?.name,
 		cost_used
 	})
 })
@@ -603,10 +603,10 @@ app.get('abstract-company/acl-id/:aclId', async (c) => {
 	return c.json({
 		csm_node: nodeName,
 		acl_id: aclCompany?.id,
-		acl_code: aclCompany?.codeCompany,
+		acl_code: aclCompany?.code,
 		acl_template: aclTemplate?.name,
 		company_ruc: aclCompany?.ruc,
-		company_name: aclCompany?.nombreComercial,
+		company_name: aclCompany?.name,
 		urls
 	})
 })
@@ -680,13 +680,13 @@ app.get('warehouses', async (c) => {
 		if (groups[csmNode]) {
 			groups[csmNode].push({
 				id: c.id,
-				code: c.codeCompany.trim()
+				code: c.code.trim()
 			})
 		} else {
 			groups[csmNode] = [
 				{
 					id: c.id,
-					code: c.codeCompany.trim()
+					code: c.code.trim()
 				}
 			]
 		}
@@ -768,7 +768,7 @@ app.get('abstract-by-dates/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -919,7 +919,7 @@ app.get('abstract/dates/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -1101,7 +1101,7 @@ app.get('abstract/dates/acl-code/:aclCode', async (c) => {
 		c.header('Content-Type', 'application/zip')
 		c.header(
 			'Content-Disposition',
-			`attachment; filename="${aclCompany.nombreComercial?.replaceAll('\n', ' ').trim().replaceAll(' ', '_') ?? aclCompany.codeCompany}.zip"`
+			`attachment; filename="${aclCompany.name?.replaceAll('\n', ' ').trim().replaceAll(' ', '_') ?? aclCompany.code}.zip"`
 		)
 
 		// 👇 Devolver stream como response
@@ -1126,7 +1126,7 @@ app.get('abstract/sales/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -1214,7 +1214,7 @@ app.get('abstract/purchases/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -1278,7 +1278,7 @@ app.get('abstract/cash-closings/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -1343,7 +1343,7 @@ app.get('abstract/expenses/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -1407,7 +1407,7 @@ app.get('abstract/skus/acl-code/:aclCode', async (c) => {
 	const aclTemplateRepo = aclDataSource.getRepository(AclTemplate)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)
@@ -1479,7 +1479,7 @@ app.get('/dashboard/:aclCode', async (c) => {
 	const aclCompanyRepo = aclDataSource.getRepository(AclCompany)
 	const companyAclCode = c.req.param().aclCode
 	const aclCompany = await aclCompanyRepo.findOneBy({
-		codeCompany: companyAclCode
+		code: companyAclCode
 	})
 	if (!aclCompany) {
 		return c.json({ error: `ACL Company ${companyAclCode} not found` }, 404)

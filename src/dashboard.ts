@@ -4,7 +4,7 @@ export const htmlDashboard = (aclCompany: AclCompany) => `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Dashboard ${aclCompany.nombreComercial}</title>
+<title>Dashboard ${aclCompany.name}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -43,7 +43,7 @@ canvas {
 
 <body>
 
-<h1>📊 Dashboard Comercial - ${aclCompany.nombreComercial} - ${aclCompany.ruc}</h1>
+<h1>📊 Dashboard Comercial - ${aclCompany.name} - ${aclCompany.ruc}</h1>
 
 <div class="controls">
   <label>Agrupar:
@@ -96,7 +96,7 @@ canvas {
 </div>
 
 <script>
-const API_URL = "https://stats.casamarketapp.com/abstract/dates/acl-code/${aclCompany.codeCompany}?format=json"
+const API_URL = "https://stats.casamarketapp.com/abstract/dates/acl-code/${aclCompany.name}?format=json"
 
 let data;
 let charts = {};

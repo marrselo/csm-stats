@@ -9,7 +9,7 @@ export class AclCompany {
 	projectId: number
 
 	@Column({ name: 'nombre_comercial', type: 'text' })
-	nombreComercial?: string
+	name?: string
 
 	@Column({ name: 'razon_social', type: 'text' })
 	razonSocial?: string
@@ -21,7 +21,7 @@ export class AclCompany {
 	hash?: string
 
 	@Column({ name: 'code_company' })
-	codeCompany: string
+	code: string
 
 	@Column({ name: 'domain' })
 	domain?: string
