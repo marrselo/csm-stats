@@ -487,16 +487,19 @@ export async function updateNotionData(csmNodes: string[]) {
 		for (const aclCompany of nodeCompanies) {
 			const pageId = nCompaniesMap.get(aclCompany.code)
 			const companyData = salesData.companies.get(aclCompany.code)
-			if (!companyData) continue
+			if (!companyData) {
+				console.log(`NOTION_UPDATER:company_data_missing ${aclCompany.code} - ${aclCompany.name}`)
+				continue
+			}
 			if (!pageId) {
 				console.log(`NOTION_UPDATER:company_notion_not_exist ${aclCompany.code} - ${aclCompany.name}`)
 				continue
 			}
-			console.log(`NOTION_UPDATER:UPDATING_COMPANY_${pageId}_${aclCompany.code} => ${companyData.quantity}`)
+			console.log(`NOTION_UPDATER:UPDATING_COMPANY_${pageId}_${aclCompany.code} => ${companyData?.quantity ?? 0}`)
 
-			await updatePage(pageId, {
+			const props: NotionProperties = {
 				'Cantidad de ventas ultimo mes': {
-					number: companyData.quantity
+					number: companyData?.quantity ?? 0
 				},
 				'ULT ACTUALIZACION': {
 					date: { start: now.toISOString() }
@@ -504,13 +507,16 @@ export async function updateNotionData(csmNodes: string[]) {
 				'Fecha ultima consulta': {
 					date: { start: now.toISOString() }
 				},
-				'Fecha ultima venta': {
-					date: { start: new Date(companyData.lastSaleTs).toISOString() }
-				},
 				'Total venta ultimo mes': {
-					number: companyData.amount
+					number: companyData?.amount ?? 0
 				}
-			})
+			}
+			if (companyData) {
+				props['Fecha ultima venta'] = {
+					date: { start: new Date(companyData.lastSaleTs).toISOString() }
+				}
+			}
+			await updatePage(pageId, props)
 			await Bun.sleep(330)
 		}
 
