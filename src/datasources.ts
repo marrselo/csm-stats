@@ -60,17 +60,17 @@ const secretsNames: { products: string; sales: string; nodeName: string }[] = [
 	{
 		nodeName: 'n3',
 		sales: 'secret-N2nodeDbSales',
-		products: 'secret-N2nodeDbProducts'
+		products: 'secret-N2ProductsDb'
 	},
 	{
 		nodeName: 'preprod',
 		sales: 'secret-N2nodeDbSales',
-		products: 'secret-N2nodeDbProducts'
+		products: 'secret-N2ProductsDb'
 	},
 	{
 		nodeName: 'dev',
-		sales: 'secret-N2nodeDbSales',
-		products: 'secret-N2nodeDbProducts'
+		sales: 'secret-devDb',
+		products: 'secret-devDb'
 	},
 	{
 		nodeName: 'n4',
