@@ -467,7 +467,7 @@ async function updatePage(pageId: string, properties: NotionProperties) {
 }
 
 export async function updateNotionData(csmNodes: string[]) {
-	const nWarehouseMap = await getNotionWarehousesMap()
+	// const nWarehouseMap = await getNotionWarehousesMap()
 	const nCompaniesMap = await getNotionCompaniesMap()
 	const now = new Date()
 
@@ -489,7 +489,6 @@ export async function updateNotionData(csmNodes: string[]) {
 			const companyData = salesData.companies.get(aclCompany.code)
 			if (!companyData) {
 				console.log(`NOTION_UPDATER:company_data_missing ${aclCompany.code} - ${aclCompany.name}`)
-				continue
 			}
 			if (!pageId) {
 				console.log(`NOTION_UPDATER:company_notion_not_exist ${aclCompany.code} - ${aclCompany.name}`)
@@ -520,25 +519,25 @@ export async function updateNotionData(csmNodes: string[]) {
 			await Bun.sleep(330)
 		}
 
-		for (const warehouseData of salesData.warehouses) {
-			const pageId = nWarehouseMap.get(warehouseData.uid)
+		// for (const warehouseData of salesData.warehouses) {
+		// 	const pageId = nWarehouseMap.get(warehouseData.uid)
 
-			if (!pageId) continue
-			console.log(`NOTION_UPDATER:UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
+		// 	if (!pageId) continue
+		// 	console.log(`NOTION_UPDATER:UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
 
-			await updatePage(pageId, {
-				'Cantidad de ventas ultimo mes': {
-					number: warehouseData.quantity
-				},
-				'Fecha ultima actualizacion': {
-					date: { start: now.toISOString() }
-				},
-				'Total venta ultimo mes': {
-					number: warehouseData.amount
-				}
-			})
-			await Bun.sleep(330)
-		}
+		// 	await updatePage(pageId, {
+		// 		'Cantidad de ventas ultimo mes': {
+		// 			number: warehouseData.quantity
+		// 		},
+		// 		'Fecha ultima actualizacion': {
+		// 			date: { start: now.toISOString() }
+		// 		},
+		// 		'Total venta ultimo mes': {
+		// 			number: warehouseData.amount
+		// 		}
+		// 	})
+		// 	await Bun.sleep(330)
+		// }
 	}
 
 	// TODO: actualizar orders,purchases,skus
