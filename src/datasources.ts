@@ -89,6 +89,9 @@ export let aclDataSource: DataSource
 export let expenseDataSource: DataSource
 
 async function initDbs() {
+	try {
+		
+
 	const secretValueAcl = await getSecret('secret-dbAcl')
 	const datasourceConfigAcl: DataSourceOptions = {
 		type: 'mysql',
@@ -171,6 +174,10 @@ async function initDbs() {
 			console.log('Error connecting to database', error)
 			throw error
 		}
+	}
+		} catch (error) {
+			console.error('ERROR_INIT_DBS',error)
+		
 	}
 }
 

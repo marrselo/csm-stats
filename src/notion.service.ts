@@ -467,11 +467,11 @@ async function updatePage(pageId: string, properties: NotionProperties) {
 }
 
 export async function updateNotionData(csmNodes: string[]) {
-	// const nWarehouseMap = await getNotionWarehousesMap()
+	const nWarehouseMap = await getNotionWarehousesMap()
 	const nCompaniesMap = await getNotionCompaniesMap()
 	const now = new Date()
 
-	const aclCompanies = await groupByNodes(['n1', 'n3', 'n4', 'n5'])
+	const aclCompanies = await groupByNodes(csmNodes)
 	for (const csmNode of csmNodes) {
 		const datasource = getDatasource(csmNode)
 		const abstractSaleRepo = datasource.sales.getRepository(AbstractSale)
@@ -519,25 +519,25 @@ export async function updateNotionData(csmNodes: string[]) {
 			await Bun.sleep(330)
 		}
 
-		// for (const warehouseData of salesData.warehouses) {
-		// 	const pageId = nWarehouseMap.get(warehouseData.uid)
+		for (const warehouseData of salesData.warehouses) {
+			const pageId = nWarehouseMap.get(warehouseData.uid)
 
-		// 	if (!pageId) continue
-		// 	console.log(`NOTION_UPDATER:UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
+			if (!pageId) continue
+			console.log(`NOTION_UPDATER:UPDATING_WAREHOUSE_${pageId}_${warehouseData.uid} => ${warehouseData.quantity}`)
 
-		// 	await updatePage(pageId, {
-		// 		'Cantidad de ventas ultimo mes': {
-		// 			number: warehouseData.quantity
-		// 		},
-		// 		'Fecha ultima actualizacion': {
-		// 			date: { start: now.toISOString() }
-		// 		},
-		// 		'Total venta ultimo mes': {
-		// 			number: warehouseData.amount
-		// 		}
-		// 	})
-		// 	await Bun.sleep(330)
-		// }
+			await updatePage(pageId, {
+				'Cantidad de ventas ultimo mes': {
+					number: warehouseData.quantity
+				},
+				'Fecha ultima actualizacion': {
+					date: { start: now.toISOString() }
+				},
+				'Total venta ultimo mes': {
+					number: warehouseData.amount
+				}
+			})
+			await Bun.sleep(330)
+		}
 	}
 
 	// TODO: actualizar orders,purchases,skus
