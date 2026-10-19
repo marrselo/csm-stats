@@ -90,94 +90,91 @@ export let expenseDataSource: DataSource
 
 async function initDbs() {
 	try {
-		
-
-	const secretValueAcl = await getSecret('secret-dbAcl')
-	const datasourceConfigAcl: DataSourceOptions = {
-		type: 'mysql',
-		host: secretValueAcl.host,
-		port: Number(secretValueAcl.port),
-		username: secretValueAcl.username,
-		password: secretValueAcl.password,
-		database: secretValueAcl.dbname,
-		entities: [AclCompany, AclTemplate],
-		synchronize: false,
-		logging: process.env.TYPEORM_LOGS === 'true'
-	}
-	aclDataSource = await new DataSource(datasourceConfigAcl).initialize()
-
-	const secretValueExpense = await getSecret('secret-dbExpense')
-	const datasourceConfigExpense: DataSourceOptions = {
-		type: 'mysql',
-		host: secretValueExpense.host,
-		port: Number(secretValueExpense.port),
-		username: secretValueExpense.username,
-		password: secretValueExpense.password,
-		database: secretValueExpense.dbname,
-		entities: [ExpenseEntity],
-		synchronize: false,
-		logging: process.env.TYPEORM_LOGS === 'true'
-	}
-	expenseDataSource = await new DataSource(datasourceConfigExpense).initialize()
-
-	for (const secrets of secretsNames) {
-		try {
-			const secretValueSales = await getSecret(secrets.sales)
-			const datasourceConfig: DataSourceOptions = {
-				type: 'mysql',
-				host: secretValueSales.host,
-				port: Number(secretValueSales.port),
-				username: secretValueSales.username,
-				password: secretValueSales.password,
-				database: secretValueSales.dbname,
-				entities: [
-					ComCompanies,
-					ComDelivery,
-					ComEmployee,
-					PurDocuments,
-					SalDocuments,
-					ComSubsidiaries,
-					AbstractSale,
-					SalTerminal,
-					CsmTypeDocument,
-					SalOrders,
-					ComMsTypeDocuments,
-					SalCashDeskClosing,
-					PurDocumentsDetails
-				],
-				synchronize: false,
-				logging: process.env.TYPEORM_LOGS === 'true'
-			}
-			const datasourceSales = await new DataSource(datasourceConfig).initialize()
-			const secretValueProducts = await getSecret(secrets.products)
-			const datasourceConfigProducts: DataSourceOptions = {
-				type: 'mysql',
-				host: secretValueProducts.host,
-				port: Number(secretValueProducts.port),
-				username: secretValueProducts.username,
-				password: secretValueProducts.password,
-				database: secretValueProducts.dbname,
-				entities: [WarWarehouses, WarWarehousesProducts, WarProduct, WarDocumentKardex],
-				synchronize: false,
-				logging: process.env.TYPEORM_LOGS === 'true'
-			}
-
-			console.log(datasourceConfig)
-			const datasourceProducts = await new DataSource(datasourceConfigProducts).initialize()
-			datasources[secrets.nodeName] = {
-				sales: datasourceSales,
-				products: datasourceProducts
-			}
-
-			console.log('Database connected successfully')
-		} catch (error) {
-			console.log('Error connecting to database', error)
-			throw error
+		const secretValueAcl = await getSecret('secret-dbAcl')
+		const datasourceConfigAcl: DataSourceOptions = {
+			type: 'mysql',
+			host: secretValueAcl.host,
+			port: Number(secretValueAcl.port),
+			username: secretValueAcl.username,
+			password: secretValueAcl.password,
+			database: secretValueAcl.dbname,
+			entities: [AclCompany, AclTemplate],
+			synchronize: false,
+			logging: process.env.TYPEORM_LOGS === 'true'
 		}
-	}
-		} catch (error) {
-			console.error('ERROR_INIT_DBS',error)
-		
+		aclDataSource = await new DataSource(datasourceConfigAcl).initialize()
+
+		const secretValueExpense = await getSecret('secret-cmsProducts')
+		const datasourceConfigExpense: DataSourceOptions = {
+			type: 'mysql',
+			host: secretValueExpense.host,
+			port: Number(secretValueExpense.port),
+			username: secretValueExpense.username,
+			password: secretValueExpense.password,
+			database: 'dp6_expenses_prod',
+			entities: [ExpenseEntity],
+			synchronize: false,
+			logging: process.env.TYPEORM_LOGS === 'true'
+		}
+		expenseDataSource = await new DataSource(datasourceConfigExpense).initialize()
+
+		for (const secrets of secretsNames) {
+			try {
+				const secretValueSales = await getSecret(secrets.sales)
+				const datasourceConfig: DataSourceOptions = {
+					type: 'mysql',
+					host: secretValueSales.host,
+					port: Number(secretValueSales.port),
+					username: secretValueSales.username,
+					password: secretValueSales.password,
+					database: secretValueSales.dbname,
+					entities: [
+						ComCompanies,
+						ComDelivery,
+						ComEmployee,
+						PurDocuments,
+						SalDocuments,
+						ComSubsidiaries,
+						AbstractSale,
+						SalTerminal,
+						CsmTypeDocument,
+						SalOrders,
+						ComMsTypeDocuments,
+						SalCashDeskClosing,
+						PurDocumentsDetails
+					],
+					synchronize: false,
+					logging: process.env.TYPEORM_LOGS === 'true'
+				}
+				const datasourceSales = await new DataSource(datasourceConfig).initialize()
+				const secretValueProducts = await getSecret(secrets.products)
+				const datasourceConfigProducts: DataSourceOptions = {
+					type: 'mysql',
+					host: secretValueProducts.host,
+					port: Number(secretValueProducts.port),
+					username: secretValueProducts.username,
+					password: secretValueProducts.password,
+					database: secretValueProducts.dbname,
+					entities: [WarWarehouses, WarWarehousesProducts, WarProduct, WarDocumentKardex],
+					synchronize: false,
+					logging: process.env.TYPEORM_LOGS === 'true'
+				}
+
+				console.log(datasourceConfig)
+				const datasourceProducts = await new DataSource(datasourceConfigProducts).initialize()
+				datasources[secrets.nodeName] = {
+					sales: datasourceSales,
+					products: datasourceProducts
+				}
+
+				console.log('Database connected successfully')
+			} catch (error) {
+				console.log('Error connecting to database', error)
+				throw error
+			}
+		}
+	} catch (error) {
+		console.error('ERROR_INIT_DBS', error)
 	}
 }
 

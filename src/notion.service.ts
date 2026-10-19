@@ -334,7 +334,7 @@ async function getDataWC(abstractSaleRepo: Repository<AbstractSale>, companiesRe
 
 	const firstSale = await abstractSaleRepo.findOne({
 		where: {
-			createdAt: MoreThanOrEqual(limitDate.getTime()),
+			createdAt: MoreThanOrEqual(limitDate.getTime())
 		},
 		select: { id: true },
 		order: { id: 'ASC' }
@@ -417,11 +417,14 @@ async function getDataWC(abstractSaleRepo: Repository<AbstractSale>, companiesRe
 				csd.quantity += 1
 			}
 		}
-		console.log(`[${new Date().toISOString()}] 📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`)
+		console.log(
+			`[${new Date().toISOString()}] 📥 Rows scanned in interval ${fromId} - ${toId} completed ${sales.length}`
+		)
 	}
 
-	console.log(`[${new Date().toISOString()}] NOTION_UPDATER:data_sizes COMPANIES:${companiesSalesMap.size} WAREHOUSES:${warehousesSalesMap.size}`)
-
+	console.log(
+		`[${new Date().toISOString()}] NOTION_UPDATER:data_sizes COMPANIES:${companiesSalesMap.size} WAREHOUSES:${warehousesSalesMap.size}`
+	)
 
 	return {
 		companies: companiesSalesMap,

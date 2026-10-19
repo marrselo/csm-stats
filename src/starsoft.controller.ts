@@ -196,7 +196,7 @@ WHERE proof_document.id IN (${proofDocumentsIds.join(',')});`)
 
 			for (const t of bankTransactions) {
 				const proofDocument = proofDocumentsMap.get(t.proofDocumentId)
-				if(!proofDocument) continue
+				if (!proofDocument) continue
 				const typeDocument = typeDocumentsMap.get(proofDocument?.proofTypeId)
 				transactions.push({
 					...t,
@@ -207,7 +207,7 @@ WHERE proof_document.id IN (${proofDocumentsIds.join(',')});`)
 					supplierDocument: proofDocument?.supplierDocument ?? null
 				})
 			}
-	
+
 			return c.json(transactions, 200)
 		}
 
